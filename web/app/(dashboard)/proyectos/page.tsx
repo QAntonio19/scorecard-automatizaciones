@@ -1,10 +1,15 @@
 import { Suspense } from "react";
+import { ApiBackendMissingEnv, ApiBackendUnreachable } from "@/components/deployment/ApiBackendNotice";
 import { KanbanBoardDynamic } from "@/components/proyectos/KanbanBoardDynamic";
 import { ProjectsGallery } from "@/components/proyectos/ProjectsGallery";
 import { ProjectsTable } from "@/components/proyectos/ProjectsTable";
 import { ProyectosToolbar } from "@/components/proyectos/ProyectosToolbar";
 import { parseProyectosSearchParams, toApiProjectsQuery } from "@/lib/proyectosUrl";
-import { fetchPortfolioSummary, fetchProjectsList } from "@/lib/projectsApi";
+import {
+  ApiNotConfiguredError,
+  fetchPortfolioSummary,
+  fetchProjectsList,
+} from "@/lib/projectsApi";
 
 function flatSearchParams(
   sp: Record<string, string | string[] | undefined>,
@@ -25,10 +30,27 @@ export default async function ProyectosPage({ searchParams }: PageProps) {
   const state = parseProyectosSearchParams(flatSearchParams(raw));
   const apiQuery = toApiProjectsQuery(state);
 
-  const [list, summary] = await Promise.all([
-    fetchProjectsList(apiQuery),
-    fetchPortfolioSummary(),
-  ]);
+  let list: Awaited<ReturnType<typeof fetchProjectsList>>;
+  let summary: Awaited<ReturnType<typeof fetchPortfolioSummary>>;
+  try {
+    [list, summary] = await Promise.all([
+      fetchProjectsList(apiQuery),
+      fetchPortfolioSummary(),
+    ]);
+  } catch (e) {
+    if (e instanceof ApiNotConfiguredError) {
+      return (
+        <div className="px-4 py-6 sm:px-6 lg:px-8">
+          <ApiBackendMissingEnv />
+        </div>
+      );
+    }
+    return (
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
+        <ApiBackendUnreachable />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 px-4 py-6 sm:px-6 lg:px-8">
