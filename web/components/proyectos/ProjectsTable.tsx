@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { phaseLabel } from "@/lib/phaseLabels";
 import type { ProjectRecord } from "@/lib/projectTypes";
 
 type SortKey = "name" | "phase" | "health" | "owner" | "category" | "steps" | "failureRate";
@@ -21,12 +22,6 @@ function sortString(p: ProjectRecord, key: Exclude<SortKey, "steps" | "failureRa
     default:
       return "";
   }
-}
-
-function phaseLabel(p: ProjectRecord["phase"]) {
-  if (p === "sin_iniciar") return "Sin iniciar";
-  if (p === "en_progreso") return "En progreso";
-  return "Completado";
 }
 
 export function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {

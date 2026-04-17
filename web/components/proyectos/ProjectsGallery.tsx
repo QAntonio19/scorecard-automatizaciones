@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { phaseLabel } from "@/lib/phaseLabels";
 import type { ProjectRecord } from "@/lib/projectTypes";
 import { HealthDot } from "@/components/proyectos/HealthDot";
 
@@ -24,13 +25,7 @@ export function ProjectsGallery({ projects }: { projects: ProjectRecord[] }) {
           <dl className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-500">
             <div>
               <dt className="font-semibold text-slate-400">Fase</dt>
-              <dd className="text-slate-800">
-                {p.phase === "sin_iniciar"
-                  ? "Sin iniciar"
-                  : p.phase === "en_progreso"
-                    ? "En progreso"
-                    : "Completado"}
-              </dd>
+              <dd className="text-slate-800">{phaseLabel(p.phase)}</dd>
             </div>
             <div>
               <dt className="font-semibold text-slate-400">Responsable</dt>

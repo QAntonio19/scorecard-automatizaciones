@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { IconDownload } from "@/components/icons/NavIcons";
+import { phaseLabel } from "@/lib/phaseLabels";
 import type { ProjectsQuery } from "@/lib/projectsApi";
+import type { ProjectPhase } from "@/lib/projectTypes";
 
 function toCsv(rows: Record<string, string | number | null | undefined>[]): string {
   if (rows.length === 0) return "";
@@ -57,7 +59,7 @@ export function CsvExportButton({ query }: { query: ProjectsQuery }) {
       const rows = data.items.map((p) => ({
         id: p.id,
         nombre: p.name,
-        fase: p.phase,
+        fase: phaseLabel(p.phase as ProjectPhase),
         salud: p.health,
         etiqueta_salud: p.healthLabel,
         responsable: p.ownerName,
@@ -83,9 +85,9 @@ export function CsvExportButton({ query }: { query: ProjectsQuery }) {
       type="button"
       onClick={() => void onClick()}
       disabled={busy}
-      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
     >
-      <IconDownload className="h-4 w-4" />
+      <IconDownload className="h-3.5 w-3.5" />
       CSV
     </button>
   );

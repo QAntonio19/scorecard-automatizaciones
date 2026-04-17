@@ -1,15 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HealthDot } from "@/components/proyectos/HealthDot";
+import { ProjectPhasePicker } from "@/components/proyectos/ProjectPhasePicker";
 import { ProjectOwnerPicker } from "@/components/proyectos/ProjectOwnerPicker";
 import { fetchProjectById } from "@/lib/projectsApi";
-import type { OwnerCode } from "@/lib/projectTypes";
-
-function phaseLabel(phase: string) {
-  if (phase === "sin_iniciar") return "Sin iniciar";
-  if (phase === "en_progreso") return "En progreso";
-  return "Completado";
-}
+import type { OwnerCode, ProjectPhase } from "@/lib/projectTypes";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -43,7 +38,13 @@ export default async function ProyectoDetallePage({ params }: PageProps) {
         <dl className="space-y-3 text-sm">
           <div>
             <dt className="text-xs font-bold uppercase text-slate-400">Fase</dt>
-            <dd className="mt-1 text-slate-900">{phaseLabel(p.phase)}</dd>
+            <dd className="mt-1">
+              <ProjectPhasePicker
+                projectId={p.id}
+                phase={p.phase as ProjectPhase}
+                phaseIsManual={Boolean(p.phaseIsManual)}
+              />
+            </dd>
           </div>
           <div>
             <dt className="text-xs font-bold uppercase text-slate-400">Responsable</dt>

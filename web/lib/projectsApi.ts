@@ -49,14 +49,15 @@ export async function fetchProjectsList(
   params: ProjectsQuery,
 ): Promise<ProjectsListResponse> {
   const url = `${getApiBaseUrl()}/api/projects${buildQueryString(params)}`;
-  const res = await fetch(url, { next: { revalidate: 20 } });
+  /** Sin caché: tras PATCH (fase, responsable) `router.refresh()` debe ver datos al instante. */
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`No se pudieron cargar los proyectos (${res.status})`);
   return (await res.json()) as ProjectsListResponse;
 }
 
 export async function fetchPortfolioSummary(): Promise<PortfolioSummaryResponse> {
   const url = `${getApiBaseUrl()}/api/projects/summary`;
-  const res = await fetch(url, { next: { revalidate: 20 } });
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`No se pudo cargar el scorecard (${res.status})`);
   const raw = (await res.json()) as PortfolioSummaryResponse;
   return {

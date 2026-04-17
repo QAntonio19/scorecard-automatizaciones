@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { KanbanBoard } from "@/components/proyectos/KanbanBoard";
+import { KanbanBoardDynamic } from "@/components/proyectos/KanbanBoardDynamic";
 import { ProjectsGallery } from "@/components/proyectos/ProjectsGallery";
 import { ProjectsTable } from "@/components/proyectos/ProjectsTable";
 import { ProyectosToolbar } from "@/components/proyectos/ProyectosToolbar";
@@ -63,7 +63,7 @@ export default async function ProyectosPage({ searchParams }: PageProps) {
       ) : state.vista === "tarjetas" ? (
         <ProjectsGallery projects={list.items} />
       ) : (
-        <KanbanBoard projects={list.items} />
+        <KanbanBoardDynamic projects={list.items} />
       )}
     </div>
   );

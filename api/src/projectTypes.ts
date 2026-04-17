@@ -1,4 +1,9 @@
-export type ProjectPhase = "sin_iniciar" | "en_progreso" | "completado";
+export type ProjectPhase =
+  | "backlog"
+  | "por_iniciar"
+  | "en_proceso"
+  | "terminados"
+  | "archivado";
 
 export type ProjectHealth = "activo" | "pausado" | "en_riesgo";
 
@@ -18,6 +23,8 @@ export interface ProjectRecord {
   platform?: string;
   /** Solo en GET /api/projects/:id — responsable asignado manualmente. */
   ownerIsManual?: boolean;
+  /** Solo en GET /api/projects/:id — fase fijada manualmente (override). */
+  phaseIsManual?: boolean;
   steps: number;
   schedule: string;
   progress: number;

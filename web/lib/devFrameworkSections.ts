@@ -104,7 +104,7 @@ export const devFrameworkTabs: DevFrameworkTab[] = [
       },
       {
         kind: "paragraph",
-        text: "Sin estos cinco pasos completados, el tablero marca el proyecto como “sin iniciar” aunque exista código experimental.",
+        text: "Sin estos cinco pasos completados, conviene dejar el proyecto en backlog o por iniciar aunque exista código experimental.",
       },
     ],
   },
@@ -170,7 +170,7 @@ export const devFrameworkTabs: DevFrameworkTab[] = [
       },
       {
         kind: "paragraph",
-        text: "El tablero Kanban refleja fases reales (sin iniciar, en progreso, completado) y salud operativa (activo, pausado, en riesgo). El scorecard resume carga por persona y proyectos que requieren atención.",
+        text: "El tablero Kanban refleja fases (backlog, por iniciar, en proceso, terminados, archivado) y salud operativa (activo, pausado, en riesgo). El scorecard resume carga por persona y proyectos que requieren atención.",
       },
       {
         kind: "callout",

@@ -1,0 +1,19 @@
+# Render Blueprint: despliega solo la API (Express + datos JSON en imagen).
+# Conecta el repo y usa este archivo como blueprint, o crea un Web Service manual:
+#   - Docker: Dockerfile path = api/Dockerfile, context = raíz del repo
+#   - Start: (ya definido en la imagen)
+#
+# Documentación: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: scorecard-automatizaciones-api
+    runtime: docker
+    dockerfilePath: ./api/Dockerfile
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      # Tras el primer deploy, edita en el panel y añade el resto (CORS, sync, etc.)

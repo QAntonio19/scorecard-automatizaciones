@@ -2,10 +2,17 @@ import { deriveAutomationPlatform } from "../automationPlatform.js";
 import type { AutomationPlatform } from "../automationPlatform.js";
 import { HttpError } from "../httpError.js";
 import { OWNER_PROFILE } from "../owners.js";
-import { readOwnerOverrides, readProjects, writeOwnerOverrides } from "../projectStore.js";
+import {
+  readOwnerOverrides,
+  readPhaseOverrides,
+  readProjects,
+  writeOwnerOverrides,
+  writePhaseOverrides,
+} from "../projectStore.js";
 import type {
   OwnerCode,
   PortfolioSummaryResponse,
+  ProjectPhase,
   ProjectRecord,
   ProjectsListResponse,
 } from "../projectTypes.js";
@@ -61,10 +68,11 @@ export function getProjectById(id: string): ProjectRecord {
 /** Incluye si el responsable viene de `project-owner-overrides.json` (asignación manual). */
 export function getProjectByIdWithMeta(
   id: string,
-): ProjectRecord & { ownerIsManual: boolean } {
+): ProjectRecord & { ownerIsManual: boolean; phaseIsManual: boolean } {
   const p = getProjectById(id);
   const overrides = readOwnerOverrides();
-  return { ...p, ownerIsManual: id in overrides };
+  const phaseOv = readPhaseOverrides();
+  return { ...p, ownerIsManual: id in overrides, phaseIsManual: id in phaseOv };
 }
 
 export function setProjectOwner(id: string, ownerCode: OwnerCode): ProjectRecord {
@@ -93,6 +101,31 @@ export function clearProjectOwnerOverride(id: string): ProjectRecord {
   return getProjectById(id);
 }
 
+export function setProjectPhase(id: string, phase: ProjectPhase): ProjectRecord {
+  if (!readProjects().some((p) => p.id === id)) {
+    throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+  }
+  const o = readPhaseOverrides();
+  const next = { ...o, [id]: phase };
+  writePhaseOverrides(next);
+  return getProjectById(id);
+}
+
+/** Quita la fase manual y aplica la que venga de datos base o del sync. */
+export function clearProjectPhaseOverride(id: string): ProjectRecord {
+  if (!readProjects().some((p) => p.id === id)) {
+    throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+  }
+  const o = readPhaseOverrides();
+  if (!(id in o)) {
+    return getProjectById(id);
+  }
+  const next = { ...o };
+  delete next[id];
+  writePhaseOverrides(next);
+  return getProjectById(id);
+}
+
 export function getPortfolioSummary(): PortfolioSummaryResponse {
   const all = readProjects();
   const activos = all.filter((p) => p.health === "activo").length;
@@ -118,7 +151,9 @@ export function getPortfolioSummary(): PortfolioSummaryResponse {
   const risk = all.filter((p) => p.health === "en_riesgo");
   const paused = all.filter((p) => p.health === "pausado");
   const activeNotStarted = all.filter(
-    (p) => p.health === "activo" && p.phase === "sin_iniciar",
+    (p) =>
+      p.health === "activo" &&
+      (p.phase === "por_iniciar" || p.phase === "backlog"),
   );
   const attentionIds = new Set<string>();
   const attention: PortfolioSummaryResponse["attention"] = [];

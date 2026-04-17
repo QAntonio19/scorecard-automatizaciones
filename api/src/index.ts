@@ -17,10 +17,12 @@ import {
 } from "./services/externalSyncService.js";
 import {
   clearProjectOwnerOverride,
+  clearProjectPhaseOverride,
   getPortfolioSummary,
   getProjectByIdWithMeta,
   listProjects,
   setProjectOwner,
+  setProjectPhase,
 } from "./services/projectService.js";
 import { listAutomationsQuerySchema } from "./validation.js";
 import {
@@ -29,6 +31,7 @@ import {
   parseOwnersFilter,
   parsePlatformFilter,
   patchProjectOwnerBodySchema,
+  patchProjectPhaseBodySchema,
 } from "./projectValidation.js";
 
 const app = express();
@@ -148,6 +151,25 @@ app.patch("/api/projects/:id/owner", (req, res, next) => {
 app.delete("/api/projects/:id/owner", (req, res, next) => {
   try {
     const result = clearProjectOwnerOverride(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.patch("/api/projects/:id/phase", (req, res, next) => {
+  try {
+    const body = patchProjectPhaseBodySchema.parse(req.body);
+    const result = setProjectPhase(req.params.id, body.phase);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.delete("/api/projects/:id/phase", (req, res, next) => {
+  try {
+    const result = clearProjectPhaseOverride(req.params.id);
     res.json(result);
   } catch (err) {
     next(err);

@@ -89,3 +89,17 @@ export const patchProjectOwnerBodySchema = z.object({
 });
 
 export type PatchProjectOwnerBody = z.infer<typeof patchProjectOwnerBodySchema>;
+
+const projectPhaseSchema = z.enum([
+  "backlog",
+  "por_iniciar",
+  "en_proceso",
+  "terminados",
+  "archivado",
+]);
+
+export const patchProjectPhaseBodySchema = z.object({
+  phase: projectPhaseSchema,
+});
+
+export type PatchProjectPhaseBody = z.infer<typeof patchProjectPhaseBodySchema>;

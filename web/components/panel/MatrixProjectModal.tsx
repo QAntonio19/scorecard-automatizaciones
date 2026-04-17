@@ -2,15 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { phaseLabel } from "@/lib/phaseLabels";
 import type { PortfolioSummaryResponse, ProjectHealth, ProjectPhase } from "@/lib/projectTypes";
 
 export type MatrixPointFull = PortfolioSummaryResponse["matrixPoints"][number];
-
-function phaseLabel(phase: ProjectPhase): string {
-  if (phase === "sin_iniciar") return "Sin iniciar";
-  if (phase === "en_progreso") return "En progreso";
-  return "Completado";
-}
 
 function HealthBadge({ health, label }: { health: ProjectHealth; label: string }) {
   const styles =

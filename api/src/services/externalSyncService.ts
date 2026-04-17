@@ -87,9 +87,10 @@ function inferHealthLabel(health: ProjectHealth): string {
   return "En riesgo";
 }
 
+/** Sync sin “aprobación” de negocio: pausado → aún no en marcha; activo/riesgo → en curso. */
 function inferPhase(health: ProjectHealth): ProjectPhase {
-  if (health === "pausado") return "sin_iniciar";
-  return "en_progreso";
+  if (health === "pausado") return "por_iniciar";
+  return "en_proceso";
 }
 
 function inferProgress(health: ProjectHealth): number {

@@ -1,52 +1,219 @@
+"use client";
+
+import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  TouchSensor,
+  closestCorners,
+  useDroppable,
+  useDraggable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useMemo, useState } from "react";
+import { phaseLabel } from "@/lib/phaseLabels";
+import { getApiBaseUrl } from "@/lib/projectsApi";
 import type { ProjectPhase, ProjectRecord } from "@/lib/projectTypes";
 import { ProjectKanbanCard } from "@/components/proyectos/ProjectKanbanCard";
 
 const phases: Array<{
   id: ProjectPhase;
-  title: string;
   border: string;
 }> = [
-  { id: "sin_iniciar", title: "Sin iniciar", border: "border-t-slate-400" },
-  { id: "en_progreso", title: "En progreso", border: "border-t-sky-500" },
-  { id: "completado", title: "Completado", border: "border-t-emerald-500" },
+  { id: "backlog", border: "border-t-slate-400" },
+  { id: "por_iniciar", border: "border-t-amber-400" },
+  { id: "en_proceso", border: "border-t-sky-500" },
+  { id: "terminados", border: "border-t-emerald-500" },
+  { id: "archivado", border: "border-t-slate-500" },
 ];
 
-export function KanbanBoard({ projects }: { projects: ProjectRecord[] }) {
+const PHASE_SET = new Set<ProjectPhase>(phases.map((c) => c.id));
+
+function resolveDropPhase(overId: string, items: ProjectRecord[]): ProjectPhase | null {
+  if (PHASE_SET.has(overId as ProjectPhase)) return overId as ProjectPhase;
+  const target = items.find((p) => p.id === overId);
+  return target ? target.phase : null;
+}
+
+async function patchProjectPhase(projectId: string, phase: ProjectPhase): Promise<void> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/projects/${encodeURIComponent(projectId)}/phase`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phase }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+}
+
+function DraggableKanbanCard({ project }: { project: ProjectRecord }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: project.id,
+  });
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.35 : undefined,
+    touchAction: "none" as const,
+  };
+
   return (
-    <div className="grid gap-5 lg:grid-cols-3">
-      {phases.map((col) => {
-        const colProjects = projects.filter((p) => p.phase === col.id);
-        const atRisk = colProjects.filter((p) => p.health === "en_riesgo").length;
-        const suffix =
-          col.id === "en_progreso" && atRisk > 0
-            ? ` — ${atRisk} en riesgo`
-            : "";
-        return (
-          <section
-            key={col.id}
-            className={`rounded-xl border border-slate-200 bg-white shadow-sm ${col.border} border-t-4`}
-          >
-            <header className="border-b border-slate-100 px-4 py-3">
-              <h2 className="text-sm font-bold text-slate-900">
-                {col.title}{" "}
-                <span className="font-semibold text-slate-500">
-                  / {colProjects.length}{" "}
-                  {colProjects.length === 1 ? "proyecto" : "proyectos"}
-                  {suffix}
-                </span>
-              </h2>
-            </header>
-            <div className="space-y-3 p-3">
-              {colProjects.map((p) => (
-                <ProjectKanbanCard key={p.id} project={p} />
-              ))}
-              {colProjects.length === 0 ? (
-                <p className="px-1 py-6 text-center text-xs text-slate-400">Sin proyectos</p>
-              ) : null}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="rounded-xl touch-none"
+      {...listeners}
+      {...attributes}
+    >
+      <ProjectKanbanCard project={project} />
+    </div>
+  );
+}
+
+function KanbanColumn({
+  col,
+  projects,
+}: {
+  col: (typeof phases)[number];
+  projects: ProjectRecord[];
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: col.id });
+  const colProjects = projects.filter((p) => p.phase === col.id);
+  const atRisk = colProjects.filter((p) => p.health === "en_riesgo").length;
+  const suffix =
+    col.id === "en_proceso" && atRisk > 0 ? ` — ${atRisk} en riesgo` : "";
+
+  return (
+    <section
+      className={`flex min-h-[min(420px,70vh)] flex-col rounded-xl border border-slate-200 bg-white shadow-sm ${col.border} border-t-4`}
+    >
+      <header className="border-b border-slate-100 px-4 py-3">
+        <h2 className="text-sm font-bold text-slate-900">
+          {phaseLabel(col.id)}{" "}
+          <span className="font-semibold text-slate-500">
+            / {colProjects.length} {colProjects.length === 1 ? "proyecto" : "proyectos"}
+            {suffix}
+          </span>
+        </h2>
+      </header>
+      <div
+        ref={setNodeRef}
+        className={`flex flex-1 flex-col space-y-3 p-3 transition-colors ${
+          isOver ? "bg-sky-50/60 ring-1 ring-inset ring-sky-200/80" : ""
+        }`}
+      >
+        {colProjects.map((p) => (
+          <DraggableKanbanCard key={p.id} project={p} />
+        ))}
+        {colProjects.length === 0 ? (
+          <p className="flex flex-1 items-center justify-center px-1 py-8 text-center text-xs text-slate-400">
+            Arrastra aquí
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+type Props = { projects: ProjectRecord[] };
+
+export function KanbanBoard({ projects: initialProjects }: Props) {
+  const router = useRouter();
+  const dndTitleId = useId();
+  const [projects, setProjects] = useState<ProjectRecord[]>(initialProjects);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    setProjects(initialProjects);
+  }, [initialProjects]);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 10 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 120, tolerance: 8 },
+    }),
+  );
+
+  const activeProject = useMemo(
+    () => (activeId ? projects.find((p) => p.id === activeId) : undefined),
+    [activeId, projects],
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over) return;
+
+    const projectId = String(active.id);
+    const targetPhase = resolveDropPhase(String(over.id), projects);
+    if (!targetPhase) return;
+
+    const current = projects.find((p) => p.id === projectId);
+    if (!current || current.phase === targetPhase) return;
+
+    const previous = projects;
+    setProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, phase: targetPhase } : p)),
+    );
+    setError(null);
+    setPending(true);
+    try {
+      await patchProjectPhase(projectId, targetPhase);
+      router.refresh();
+    } catch (e) {
+      setProjects(previous);
+      setError(e instanceof Error ? e.message : "No se pudo mover el proyecto.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p id={dndTitleId} className="sr-only">
+        Tablero Kanban: arrastra una tarjeta a otra columna para cambiar la fase del proyecto.
+      </p>
+      {error ? (
+        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {pending ? (
+        <p className="text-xs text-slate-500" aria-live="polite">
+          Guardando…
+        </p>
+      ) : null}
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={({ active }: DragStartEvent) => setActiveId(String(active.id))}
+        onDragCancel={() => setActiveId(null)}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {phases.map((col) => (
+            <KanbanColumn key={col.id} col={col} projects={projects} />
+          ))}
+        </div>
+        <DragOverlay dropAnimation={null}>
+          {activeProject ? (
+            <div className="cursor-grabbing rounded-xl shadow-lg ring-2 ring-sky-400/80">
+              <ProjectKanbanCard project={activeProject} />
             </div>
-          </section>
-        );
-      })}
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }
