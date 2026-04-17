@@ -2,14 +2,14 @@ import { ApiBackendMissingEnv, ApiBackendUnreachable } from "@/components/deploy
 import { AttentionList } from "@/components/panel/AttentionList";
 import { MetricStrip } from "@/components/panel/MetricStrip";
 import { PriorityMatrix } from "@/components/panel/PriorityMatrix";
-import { ApiNotConfiguredError, fetchPortfolioSummary } from "@/lib/projectsApi";
+import { fetchPortfolioSummary, isApiNotConfiguredError } from "@/lib/projectsApi";
 
 export default async function PanelPage() {
   let summary: Awaited<ReturnType<typeof fetchPortfolioSummary>>;
   try {
     summary = await fetchPortfolioSummary();
   } catch (e) {
-    if (e instanceof ApiNotConfiguredError) {
+    if (isApiNotConfiguredError(e)) {
       return (
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           <ApiBackendMissingEnv />

@@ -24,7 +24,8 @@ export function getApiBaseUrl(): string {
   }
   const raw = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL;
   if (raw) return raw.replace(/\/$/, "");
-  if (process.env.VERCEL === "1") return "";
+  /** En Vercel el env suele ser `1`; en previews también existe `VERCEL`. */
+  if (process.env.VERCEL) return "";
   return "http://localhost:4000";
 }
 
@@ -33,6 +34,17 @@ export class ApiNotConfiguredError extends Error {
     super("API_NOT_CONFIGURED");
     this.name = "ApiNotConfiguredError";
   }
+}
+
+/** `instanceof` a veces falla con el mismo error en otro bundle; usar esto en catch. */
+export function isApiNotConfiguredError(e: unknown): boolean {
+  return (
+    e instanceof ApiNotConfiguredError ||
+    (typeof e === "object" &&
+      e !== null &&
+      "name" in e &&
+      (e as { name: string }).name === "ApiNotConfiguredError")
+  );
 }
 
 function assertServerApiConfigured(): void {
@@ -71,16 +83,33 @@ export async function fetchProjectsList(
   return (await res.json()) as ProjectsListResponse;
 }
 
+function normalizePortfolioSummary(raw: unknown): PortfolioSummaryResponse {
+  const r = (typeof raw === "object" && raw !== null ? raw : {}) as Partial<PortfolioSummaryResponse>;
+  return {
+    total: typeof r.total === "number" ? r.total : 0,
+    activos: typeof r.activos === "number" ? r.activos : 0,
+    pausados: typeof r.pausados === "number" ? r.pausados : 0,
+    enRiesgo: typeof r.enRiesgo === "number" ? r.enRiesgo : 0,
+    workflowCounts: r.workflowCounts ?? EMPTY_WORKFLOW_COUNTS,
+    categories: Array.isArray(r.categories) ? r.categories : [],
+    workload: Array.isArray(r.workload) ? r.workload : [],
+    matrixPoints: Array.isArray(r.matrixPoints) ? r.matrixPoints : [],
+    attention: Array.isArray(r.attention) ? r.attention : [],
+  };
+}
+
 export async function fetchPortfolioSummary(): Promise<PortfolioSummaryResponse> {
   assertServerApiConfigured();
   const url = `${getApiBaseUrl()}/api/projects/summary`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`No se pudo cargar el scorecard (${res.status})`);
-  const raw = (await res.json()) as PortfolioSummaryResponse;
-  return {
-    ...raw,
-    workflowCounts: raw.workflowCounts ?? EMPTY_WORKFLOW_COUNTS,
-  };
+  let parsed: unknown;
+  try {
+    parsed = await res.json();
+  } catch {
+    throw new Error("La API devolvió un cuerpo que no es JSON válido.");
+  }
+  return normalizePortfolioSummary(parsed);
 }
 
 export async function fetchProjectById(id: string): Promise<ProjectRecord | null> {

@@ -5,11 +5,7 @@ import { ProjectsGallery } from "@/components/proyectos/ProjectsGallery";
 import { ProjectsTable } from "@/components/proyectos/ProjectsTable";
 import { ProyectosToolbar } from "@/components/proyectos/ProyectosToolbar";
 import { parseProyectosSearchParams, toApiProjectsQuery } from "@/lib/proyectosUrl";
-import {
-  ApiNotConfiguredError,
-  fetchPortfolioSummary,
-  fetchProjectsList,
-} from "@/lib/projectsApi";
+import { fetchPortfolioSummary, fetchProjectsList, isApiNotConfiguredError } from "@/lib/projectsApi";
 
 function flatSearchParams(
   sp: Record<string, string | string[] | undefined>,
@@ -38,7 +34,7 @@ export default async function ProyectosPage({ searchParams }: PageProps) {
       fetchPortfolioSummary(),
     ]);
   } catch (e) {
-    if (e instanceof ApiNotConfiguredError) {
+    if (isApiNotConfiguredError(e)) {
       return (
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           <ApiBackendMissingEnv />

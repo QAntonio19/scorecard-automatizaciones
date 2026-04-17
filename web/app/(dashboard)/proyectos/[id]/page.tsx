@@ -4,7 +4,7 @@ import { ApiBackendMissingEnv, ApiBackendUnreachable } from "@/components/deploy
 import { HealthDot } from "@/components/proyectos/HealthDot";
 import { ProjectPhasePicker } from "@/components/proyectos/ProjectPhasePicker";
 import { ProjectOwnerPicker } from "@/components/proyectos/ProjectOwnerPicker";
-import { ApiNotConfiguredError, fetchProjectById } from "@/lib/projectsApi";
+import { fetchProjectById, isApiNotConfiguredError } from "@/lib/projectsApi";
 import type { OwnerCode, ProjectPhase } from "@/lib/projectTypes";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -15,7 +15,7 @@ export default async function ProyectoDetallePage({ params }: PageProps) {
   try {
     p = await fetchProjectById(id);
   } catch (e) {
-    if (e instanceof ApiNotConfiguredError) {
+    if (isApiNotConfiguredError(e)) {
       return (
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           <ApiBackendMissingEnv />

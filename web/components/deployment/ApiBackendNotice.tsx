@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Mensajes cuando la API no está configurada o no responde (p. ej. Vercel sin env o API caída).
  */
