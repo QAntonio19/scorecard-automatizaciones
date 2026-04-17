@@ -2,6 +2,10 @@
 
 La app **Next.js** va bien en **Vercel**. La **API Express** usa archivos JSON en disco (`api/data`); en Vercel Serverless no tendrías persistencia fiable para overrides y sync. Por eso la API se despliega como **servicio Node** (Docker) en Render, Railway, Fly.io, etc.
 
+## Si el build falla con `NEXT_TELEMETRY_DISABLED=1` (comando antiguo)
+
+En el proyecto de Vercel: **Settings → General → Build & Development Settings**. Si **Build Command** tiene un valor manual, bórralo (deja el override desactivado) para que use `web/vercel.json` del repo.
+
 ## Recrear el proyecto si lo borraste en Vercel
 
 Vercel **no restaura** proyectos eliminados. Hay que volver a **importar** el repo (es el mismo código en GitHub).
