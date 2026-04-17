@@ -44,6 +44,16 @@ app.use(
 );
 app.use(express.json());
 
+/** Raíz: evita "Cannot GET /" al abrir la URL del servicio en el navegador. */
+app.get("/", (_req, res) => {
+  res.type("html").send(
+    `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/><title>Scorecard API</title></head><body style="font-family:system-ui;padding:1.5rem">
+    <h1>API Scorecard</h1>
+    <p>Servidor Express activo. Prueba <a href="/health">/health</a> o los endpoints bajo <code>/api/*</code>.</p>
+    </body></html>`,
+  );
+});
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" as const });
 });

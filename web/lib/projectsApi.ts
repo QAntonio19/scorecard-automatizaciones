@@ -15,35 +15,45 @@ const EMPTY_WORKFLOW_COUNTS: WorkflowPlatformCounts = {
  * Resolución de la base para `/api/*`:
  *
  * - `NEXT_PUBLIC_API_URL` o `API_URL`: llamada directa al backend (CORS debe permitir el origen del front).
- * - `SCORECARD_API_ORIGIN`: el front usa el **proxy** de Next (`/api/*` → backend). En cliente va vacío
- *   (mismo origen); en servidor se usa la URL pública del propio deploy (`VERCEL_URL`) o localhost en dev.
+ * - `SCORECARD_API_ORIGIN`: en **cliente** el proxy de Next (`/api/*` → backend) usa URL relativa
+ *   (`NEXT_PUBLIC_SCORECARD_PROXY`). En **servidor** (RSC, Server Actions) llamamos al backend **directamente**
+ *   con esta URL: evita `fetch` al propio deploy en Vercel (`https://$VERCEL_URL/api/...`), que a menudo falla
+ *   (self-invocation, DNS o timeouts) aunque la API en Render esté bien.
  *
  * En Vercel sin ninguna de las anteriores, no hay base válida (se muestra aviso de configuración).
  */
-function devWebOrigin(): string {
-  const port = process.env.PORT ?? "3000";
-  return `http://127.0.0.1:${port}`;
+function isLocalhostUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.hostname === "localhost" || u.hostname === "127.0.0.1" || u.hostname === "::1";
+  } catch {
+    return /localhost|127\.0\.0\.1/i.test(url);
+  }
 }
 
 export function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
-    const explicit = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+    const explicit = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, "");
     if (explicit) return explicit;
     if (process.env.NEXT_PUBLIC_SCORECARD_PROXY === "1") return "";
     return "http://localhost:4000".replace(/\/$/, "");
   }
 
-  const explicit = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL)?.replace(/\/$/, "");
-  if (explicit) return explicit;
-
-  if (process.env.SCORECARD_API_ORIGIN) {
-    if (process.env.VERCEL_URL) {
-      return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
-    }
-    return devWebOrigin();
+  const onVercel = Boolean(process.env.VERCEL);
+  const explicit = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL)?.trim().replace(/\/$/, "");
+  /** En Vercel, `API_URL`/`NEXT_PUBLIC_API_URL` a menudo quedan en localhost por un .env local — eso rompe el SSR. */
+  if (explicit && !(onVercel && isLocalhostUrl(explicit))) {
+    return explicit;
   }
 
-  if (process.env.VERCEL) return "";
+  const scorecardOrigin =
+    process.env.SCORECARD_API_ORIGIN?.trim().replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_SCORECARD_API_ORIGIN?.trim().replace(/\/$/, "");
+  if (scorecardOrigin) {
+    return scorecardOrigin;
+  }
+
+  if (onVercel) return "";
   return "http://localhost:4000";
 }
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { IconDownload } from "@/components/icons/NavIcons";
 import { phaseLabel } from "@/lib/phaseLabels";
-import type { ProjectsQuery } from "@/lib/projectsApi";
+import { getApiBaseUrl, type ProjectsQuery } from "@/lib/projectsApi";
 import type { ProjectPhase } from "@/lib/projectTypes";
 
 function toCsv(rows: Record<string, string | number | null | undefined>[]): string {
@@ -19,11 +19,6 @@ function toCsv(rows: Record<string, string | number | null | undefined>[]): stri
     ...rows.map((r) => headers.map((h) => esc(r[h])).join(",")),
   ];
   return lines.join("\n");
-}
-
-function getApiBaseUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-  return raw.replace(/\/$/, "");
 }
 
 export function CsvExportButton({ query }: { query: ProjectsQuery }) {

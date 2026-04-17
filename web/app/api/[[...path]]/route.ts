@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const UPSTREAM = process.env.SCORECARD_API_ORIGIN?.replace(/\/$/, "");
+const UPSTREAM =
+  process.env.SCORECARD_API_ORIGIN?.replace(/\/$/, "") ||
+  process.env.NEXT_PUBLIC_SCORECARD_API_ORIGIN?.replace(/\/$/, "");
 
 function buildUpstreamUrl(request: Request, pathSegments: string[]): string | null {
   if (!UPSTREAM) return null;
