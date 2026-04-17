@@ -13,7 +13,10 @@ Vercel **no restaura** proyectos eliminados. Hay que volver a **importar** el re
 1. Entra en [vercel.com/new](https://vercel.com/new) (equipo correcto: p. ej. *ITAI's projects*).
 2. **Add New…** → **Project** → **Import** `QAntonio19/scorecard-automatizaciones`.
 3. En **Root Directory**, pulsa **Edit** y escribe **`web`** (obligatorio en este monorepo).
-4. **Environment Variables** → añade `NEXT_PUBLIC_API_URL` (URL de tu API en producción, sin `/` final). Si aún no tienes API, puedes desplegar igual y añadirla después.
+4. **Environment Variables** → define la URL de tu API Express, por ejemplo:
+   - **`SCORECARD_API_ORIGIN`** = `https://tu-servicio.onrender.com` (recomendado: el front hace proxy interno a `/api/*`, sin CORS en el cliente), **o**
+   - **`NEXT_PUBLIC_API_URL`** = la misma URL (llamada directa; la API debe permitir CORS desde tu dominio Vercel).
+   Sin barra final. Redeploy tras guardar.
 5. **Deploy**.
 
 Opcional por CLI (tras `npx vercel login` en tu máquina): en la carpeta `web`, `npm run deploy:vercel`.
@@ -27,8 +30,7 @@ Opcional por CLI (tras `npx vercel login` en tu máquina): en la carpeta `web`, 
    - **Framework Preset**: Next.js (detectado)
    - **Build Command**: `npm run build` (por defecto)
    - **Install Command**: `npm install` (por defecto)
-4. **Environment Variables** (Production):
-   - `NEXT_PUBLIC_API_URL` = URL pública de tu API, por ejemplo `https://scorecard-api-xxxx.onrender.com` (sin barra final).
+4. **Environment Variables** (Production): `SCORECARD_API_ORIGIN` **o** `NEXT_PUBLIC_API_URL` = URL pública de tu API (sin barra final).
 
 5. Deploy.
 

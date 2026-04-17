@@ -12,19 +12,37 @@ const EMPTY_WORKFLOW_COUNTS: WorkflowPlatformCounts = {
 };
 
 /**
- * En el navegador solo existen variables `NEXT_PUBLIC_*`. Si no, el PATCH al cambiar
- * responsable apuntaba mal o quedaba vacío `API_URL` del servidor.
+ * Resolución de la base para `/api/*`:
  *
- * En Vercel (VERCEL=1), si no hay `API_URL` ni `NEXT_PUBLIC_API_URL`, no se asume localhost:
- * el fetch a localhost en SSR rompe el despliegue con un error opaco.
+ * - `NEXT_PUBLIC_API_URL` o `API_URL`: llamada directa al backend (CORS debe permitir el origen del front).
+ * - `SCORECARD_API_ORIGIN`: el front usa el **proxy** de Next (`/api/*` → backend). En cliente va vacío
+ *   (mismo origen); en servidor se usa la URL pública del propio deploy (`VERCEL_URL`) o localhost en dev.
+ *
+ * En Vercel sin ninguna de las anteriores, no hay base válida (se muestra aviso de configuración).
  */
+function devWebOrigin(): string {
+  const port = process.env.PORT ?? "3000";
+  return `http://127.0.0.1:${port}`;
+}
+
 export function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
-    return (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/, "");
+    const explicit = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+    if (explicit) return explicit;
+    if (process.env.NEXT_PUBLIC_SCORECARD_PROXY === "1") return "";
+    return "http://localhost:4000".replace(/\/$/, "");
   }
-  const raw = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL;
-  if (raw) return raw.replace(/\/$/, "");
-  /** En Vercel el env suele ser `1`; en previews también existe `VERCEL`. */
+
+  const explicit = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL)?.replace(/\/$/, "");
+  if (explicit) return explicit;
+
+  if (process.env.SCORECARD_API_ORIGIN) {
+    if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
+    }
+    return devWebOrigin();
+  }
+
   if (process.env.VERCEL) return "";
   return "http://localhost:4000";
 }
