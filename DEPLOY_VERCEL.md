@@ -2,6 +2,18 @@
 
 La app **Next.js** va bien en **Vercel**. La **API Express** usa archivos JSON en disco (`api/data`); en Vercel Serverless no tendrías persistencia fiable para overrides y sync. Por eso la API se despliega como **servicio Node** (Docker) en Render, Railway, Fly.io, etc.
 
+## Recrear el proyecto si lo borraste en Vercel
+
+Vercel **no restaura** proyectos eliminados. Hay que volver a **importar** el repo (es el mismo código en GitHub).
+
+1. Entra en [vercel.com/new](https://vercel.com/new) (equipo correcto: p. ej. *ITAI's projects*).
+2. **Add New…** → **Project** → **Import** `QAntonio19/scorecard-automatizaciones`.
+3. En **Root Directory**, pulsa **Edit** y escribe **`web`** (obligatorio en este monorepo).
+4. **Environment Variables** → añade `NEXT_PUBLIC_API_URL` (URL de tu API en producción, sin `/` final). Si aún no tienes API, puedes desplegar igual y añadirla después.
+5. **Deploy**.
+
+Opcional por CLI (tras `npx vercel login` en tu máquina): en la carpeta `web`, `npm run deploy:vercel`.
+
 ## 1. Frontend en Vercel
 
 1. Sube el repo a **GitHub** (o GitLab / Bitbucket).

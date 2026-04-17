@@ -9,7 +9,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy:vercel": "npx vercel@latest deploy --prod"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
