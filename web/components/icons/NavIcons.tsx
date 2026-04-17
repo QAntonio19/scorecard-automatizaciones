@@ -24,20 +24,6 @@ export function IconFolder({ className }: { className?: string }) {
   );
 }
 
-export function IconRocket({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M14 3 3 14l4 1 1 4L19 7l-5-4Zm0 0 5 5M7 21l1-4"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function IconMenu({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>

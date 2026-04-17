@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconFolder, IconPanel, IconRocket } from "@/components/icons/NavIcons";
+import { IconFolder, IconPanel } from "@/components/icons/NavIcons";
 
 const nav = [
   { href: "/panel", label: "Panel", Icon: IconPanel },
   { href: "/proyectos", label: "Proyectos", Icon: IconFolder },
-  { href: "/dev-framework", label: "Dev Framework", Icon: IconRocket },
 ] as const;
 
 function NavLink({
