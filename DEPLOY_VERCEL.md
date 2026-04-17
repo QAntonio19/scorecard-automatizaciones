@@ -4,7 +4,7 @@ La app **Next.js** va bien en **Vercel**. La **API Express** usa archivos JSON e
 
 ## Si el build falla con `NEXT_TELEMETRY_DISABLED=1` (comando antiguo)
 
-En el proyecto de Vercel: **Settings → General → Build & Development Settings**. Si **Build Command** tiene un valor manual, bórralo (deja el override desactivado) para que use `web/vercel.json` del repo.
+En el proyecto de Vercel: **Settings → General → Build & Development Settings**. Si **Build Command** o **Install Command** tienen un valor manual distinto de los por defecto, bórralos (override desactivado) para que Vercel use `npm install` y `npm run build` con **Root Directory** = `web`.
 
 ## Recrear el proyecto si lo borraste en Vercel
 
