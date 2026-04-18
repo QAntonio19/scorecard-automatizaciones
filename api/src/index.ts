@@ -21,6 +21,7 @@ import {
   getPortfolioSummary,
   getProjectByIdWithMeta,
   listProjects,
+  patchProjectDetails,
   setProjectOwner,
   setProjectPhase,
 } from "./services/projectService.js";
@@ -30,6 +31,7 @@ import {
   parseHealthFilter,
   parseOwnersFilter,
   parsePlatformFilter,
+  patchProjectDetailsBodySchema,
   patchProjectOwnerBodySchema,
   patchProjectPhaseBodySchema,
 } from "./projectValidation.js";
@@ -80,15 +82,15 @@ app.get("/api/automations/:id", (req, res, next) => {
   }
 });
 
-app.get("/api/projects/summary", (_req, res, next) => {
+app.get("/api/projects/summary", async (_req, res, next) => {
   try {
-    res.json(getPortfolioSummary());
+    res.json(await getPortfolioSummary());
   } catch (err) {
     next(err);
   }
 });
 
-app.get("/api/projects", (req, res, next) => {
+app.get("/api/projects", async (req, res, next) => {
   try {
     const query = listProjectsQuerySchema.parse({
       owners: req.query.owners,
@@ -100,7 +102,7 @@ app.get("/api/projects", (req, res, next) => {
     const owners = parseOwnersFilter(query.owners);
     const health = parseHealthFilter(query.health);
     const platforms = parsePlatformFilter(query.platform);
-    const result = listProjects(query, owners, health, platforms);
+    const result = await listProjects(query, owners, health, platforms);
     res.json(result);
   } catch (err) {
     next(err);
@@ -148,47 +150,57 @@ app.get("/api/projects/sync/env", (_req, res) => {
   });
 });
 
-app.patch("/api/projects/:id/owner", (req, res, next) => {
+app.patch("/api/projects/:id/owner", async (req, res, next) => {
   try {
     const body = patchProjectOwnerBodySchema.parse(req.body);
-    const result = setProjectOwner(req.params.id, body.ownerCode);
+    const result = await setProjectOwner(req.params.id, body.ownerCode);
     res.json(result);
   } catch (err) {
     next(err);
   }
 });
 
-app.delete("/api/projects/:id/owner", (req, res, next) => {
+app.delete("/api/projects/:id/owner", async (req, res, next) => {
   try {
-    const result = clearProjectOwnerOverride(req.params.id);
+    const result = await clearProjectOwnerOverride(req.params.id);
     res.json(result);
   } catch (err) {
     next(err);
   }
 });
 
-app.patch("/api/projects/:id/phase", (req, res, next) => {
+app.patch("/api/projects/:id/phase", async (req, res, next) => {
   try {
     const body = patchProjectPhaseBodySchema.parse(req.body);
-    const result = setProjectPhase(req.params.id, body.phase);
+    const result = await setProjectPhase(req.params.id, body.phase);
     res.json(result);
   } catch (err) {
     next(err);
   }
 });
 
-app.delete("/api/projects/:id/phase", (req, res, next) => {
+app.delete("/api/projects/:id/phase", async (req, res, next) => {
   try {
-    const result = clearProjectPhaseOverride(req.params.id);
+    const result = await clearProjectPhaseOverride(req.params.id);
     res.json(result);
   } catch (err) {
     next(err);
   }
 });
 
-app.get("/api/projects/:id", (req, res, next) => {
+app.patch("/api/projects/:id", async (req, res, next) => {
   try {
-    const result = getProjectByIdWithMeta(req.params.id);
+    const body = patchProjectDetailsBodySchema.parse(req.body);
+    const result = await patchProjectDetails(req.params.id, body);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/api/projects/:id", async (req, res, next) => {
+  try {
+    const result = await getProjectByIdWithMeta(req.params.id);
     res.json(result);
   } catch (err) {
     next(err);

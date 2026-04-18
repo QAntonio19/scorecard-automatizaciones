@@ -3,12 +3,22 @@ import type { AutomationPlatform } from "../automationPlatform.js";
 import { HttpError } from "../httpError.js";
 import { OWNER_PROFILE } from "../owners.js";
 import {
+  getProjectsDataMode,
+  readDetailsOverrides,
   readOwnerOverrides,
   readPhaseOverrides,
   readProjects,
+  writeDetailsOverrides,
   writeOwnerOverrides,
   writePhaseOverrides,
 } from "../projectStore.js";
+import {
+  supabaseClearOwnerOverride,
+  supabaseClearPhaseOverride,
+  supabasePatchWorkflowDetails,
+  supabaseSetOwnerOverride,
+  supabaseSetPhaseOverride,
+} from "./supabaseProjectRepository.js";
 import type {
   OwnerCode,
   PortfolioSummaryResponse,
@@ -16,7 +26,7 @@ import type {
   ProjectRecord,
   ProjectsListResponse,
 } from "../projectTypes.js";
-import type { ListProjectsQuery } from "../projectValidation.js";
+import type { ListProjectsQuery, PatchProjectDetailsBody } from "../projectValidation.js";
 import { parseHealthFilter, parseOwnersFilter } from "../projectValidation.js";
 
 function matchesQuery(
@@ -45,38 +55,49 @@ function matchesQuery(
   return true;
 }
 
-export function listProjects(
+export async function listProjects(
   query: ListProjectsQuery,
   owners: OwnerCode[] | null,
   health: ReturnType<typeof parseHealthFilter>,
   platforms: AutomationPlatform[] | null,
-): ProjectsListResponse {
-  const items = readProjects().filter((p) =>
+): Promise<ProjectsListResponse> {
+  const items = (await readProjects()).filter((p) =>
     matchesQuery(p, query, owners, health, platforms),
   );
   return { items, total: items.length };
 }
 
-export function getProjectById(id: string): ProjectRecord {
-  const found = readProjects().find((p) => p.id === id);
+export async function getProjectById(id: string): Promise<ProjectRecord> {
+  const found = (await readProjects()).find((p) => p.id === id);
   if (!found) {
     throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
   }
   return found;
 }
 
-/** Incluye si el responsable viene de `project-owner-overrides.json` (asignación manual). */
-export function getProjectByIdWithMeta(
+/** Incluye si el responsable viene de overrides locales o columnas Supabase. */
+export async function getProjectByIdWithMeta(
   id: string,
-): ProjectRecord & { ownerIsManual: boolean; phaseIsManual: boolean } {
-  const p = getProjectById(id);
+): Promise<ProjectRecord & { ownerIsManual: boolean; phaseIsManual: boolean }> {
+  const p = await getProjectById(id);
+  if (getProjectsDataMode() === "supabase") {
+    return {
+      ...p,
+      ownerIsManual: Boolean(p.ownerIsManual),
+      phaseIsManual: Boolean(p.phaseIsManual),
+    };
+  }
   const overrides = readOwnerOverrides();
   const phaseOv = readPhaseOverrides();
   return { ...p, ownerIsManual: id in overrides, phaseIsManual: id in phaseOv };
 }
 
-export function setProjectOwner(id: string, ownerCode: OwnerCode): ProjectRecord {
-  if (!readProjects().some((p) => p.id === id)) {
+export async function setProjectOwner(id: string, ownerCode: OwnerCode): Promise<ProjectRecord> {
+  if (getProjectsDataMode() === "supabase") {
+    await supabaseSetOwnerOverride(id, ownerCode);
+    return getProjectById(id);
+  }
+  if (!(await readProjects()).some((p) => p.id === id)) {
     throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
   }
   const { ownerName } = OWNER_PROFILE[ownerCode];
@@ -87,8 +108,12 @@ export function setProjectOwner(id: string, ownerCode: OwnerCode): ProjectRecord
 }
 
 /** Quita la asignación manual y vuelve al responsable que viene de datos base / sync. */
-export function clearProjectOwnerOverride(id: string): ProjectRecord {
-  if (!readProjects().some((p) => p.id === id)) {
+export async function clearProjectOwnerOverride(id: string): Promise<ProjectRecord> {
+  if (getProjectsDataMode() === "supabase") {
+    await supabaseClearOwnerOverride(id);
+    return getProjectById(id);
+  }
+  if (!(await readProjects()).some((p) => p.id === id)) {
     throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
   }
   const overrides = readOwnerOverrides();
@@ -101,8 +126,12 @@ export function clearProjectOwnerOverride(id: string): ProjectRecord {
   return getProjectById(id);
 }
 
-export function setProjectPhase(id: string, phase: ProjectPhase): ProjectRecord {
-  if (!readProjects().some((p) => p.id === id)) {
+export async function setProjectPhase(id: string, phase: ProjectPhase): Promise<ProjectRecord> {
+  if (getProjectsDataMode() === "supabase") {
+    await supabaseSetPhaseOverride(id, phase);
+    return getProjectById(id);
+  }
+  if (!(await readProjects()).some((p) => p.id === id)) {
     throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
   }
   const o = readPhaseOverrides();
@@ -112,8 +141,12 @@ export function setProjectPhase(id: string, phase: ProjectPhase): ProjectRecord 
 }
 
 /** Quita la fase manual y aplica la que venga de datos base o del sync. */
-export function clearProjectPhaseOverride(id: string): ProjectRecord {
-  if (!readProjects().some((p) => p.id === id)) {
+export async function clearProjectPhaseOverride(id: string): Promise<ProjectRecord> {
+  if (getProjectsDataMode() === "supabase") {
+    await supabaseClearPhaseOverride(id);
+    return getProjectById(id);
+  }
+  if (!(await readProjects()).some((p) => p.id === id)) {
     throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
   }
   const o = readPhaseOverrides();
@@ -126,8 +159,29 @@ export function clearProjectPhaseOverride(id: string): ProjectRecord {
   return getProjectById(id);
 }
 
-export function getPortfolioSummary(): PortfolioSummaryResponse {
-  const all = readProjects();
+/** Actualiza campos editables del proyecto (JSON: overrides locales; Supabase: fila `workflows`). */
+export async function patchProjectDetails(
+  id: string,
+  patch: PatchProjectDetailsBody,
+): Promise<ProjectRecord> {
+  if (getProjectsDataMode() === "supabase") {
+    await supabasePatchWorkflowDetails(id, patch);
+    return getProjectById(id);
+  }
+  if (!(await readProjects()).some((p) => p.id === id)) {
+    throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+  }
+  const all = readDetailsOverrides();
+  const prev = all[id] ?? {};
+  const next = { ...prev, ...patch };
+  all[id] = next;
+  if (Object.keys(next).length === 0) delete all[id];
+  writeDetailsOverrides(all);
+  return getProjectById(id);
+}
+
+export async function getPortfolioSummary(): Promise<PortfolioSummaryResponse> {
+  const all = await readProjects();
   const activos = all.filter((p) => p.health === "activo").length;
   const pausados = all.filter((p) => p.health === "pausado").length;
   const enRiesgo = all.filter((p) => p.health === "en_riesgo").length;

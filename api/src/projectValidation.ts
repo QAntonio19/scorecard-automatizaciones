@@ -103,3 +103,26 @@ export const patchProjectPhaseBodySchema = z.object({
 });
 
 export type PatchProjectPhaseBody = z.infer<typeof patchProjectPhaseBodySchema>;
+
+/** Campos editables vía PATCH /api/projects/:id (además de fase y responsable). */
+export const patchProjectDetailsBodySchema = z
+  .object({
+    name: z.string().min(1).max(500).optional(),
+    description: z.string().max(20000).optional(),
+    category: z.string().max(500).optional(),
+    complexity: z.number().int().min(1).max(10).optional(),
+    businessValue: z.number().int().min(1).max(10).optional(),
+    steps: z.number().int().min(0).max(500_000).optional(),
+    progress: z.number().min(0).max(100).optional(),
+    schedule: z.string().max(1000).optional(),
+    failureRate: z.number().min(0).max(100).nullable().optional(),
+    riskNote: z.string().max(5000).nullable().optional(),
+    health: healthSchema.optional(),
+    healthLabel: z.string().max(80).optional(),
+  })
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "Envía al menos un campo para actualizar.",
+  });
+
+export type PatchProjectDetailsBody = z.infer<typeof patchProjectDetailsBodySchema>;

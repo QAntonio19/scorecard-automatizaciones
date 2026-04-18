@@ -2,18 +2,19 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizePhaseValue, normalizeProjectRecordPhase } from "./projectPhases.js";
-import type { OwnerCode, ProjectPhase, ProjectRecord } from "./projectTypes.js";
+import type { OwnerCode, ProjectHealth, ProjectPhase, ProjectRecord } from "./projectTypes.js";
+import type { PatchProjectDetailsBody } from "./projectValidation.js";
 
-type ProjectsDataMode = "merged" | "external_only" | "json_only";
+type ProjectsDataMode = "merged" | "external_only" | "json_only" | "supabase";
 
 /** Responsable persistido por id de proyecto (sobrevive a sync n8n/Make). */
 export type OwnerOverrideEntry = { ownerCode: OwnerCode; ownerName: string };
 
 export type OwnerOverridesFile = Record<string, OwnerOverrideEntry>;
 
-function getProjectsDataMode(): ProjectsDataMode {
+export function getProjectsDataMode(): ProjectsDataMode {
   const raw = process.env.PROJECTS_DATA_MODE?.trim().toLowerCase();
-  if (raw === "external_only" || raw === "json_only" || raw === "merged") {
+  if (raw === "external_only" || raw === "json_only" || raw === "merged" || raw === "supabase") {
     return raw;
   }
   return "merged";
@@ -45,6 +46,13 @@ const phaseOverridesPath = join(
   "..",
   "data",
   "project-phase-overrides.json",
+);
+
+const detailsOverridesPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "data",
+  "project-details-overrides.json",
 );
 
 /** Fase por id (sobrevive al sync; mismo criterio que el responsable manual). */
@@ -105,6 +113,44 @@ export function writePhaseOverrides(overrides: PhaseOverridesFile): void {
   writeFileSync(phaseOverridesPath, JSON.stringify(overrides, null, 2), "utf-8");
 }
 
+/** Overrides de campos editables (nombre, métricas, notas, etc.) por id de proyecto. */
+export type ProjectDetailsOverridesFile = Record<string, Partial<PatchProjectDetailsBody>>;
+
+export function readDetailsOverrides(): ProjectDetailsOverridesFile {
+  if (!existsSync(detailsOverridesPath)) return {};
+  const raw = readFileSync(detailsOverridesPath, "utf-8");
+  const parsed: unknown = JSON.parse(raw);
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Invalid project-details-overrides.json: expected object");
+  }
+  return parsed as ProjectDetailsOverridesFile;
+}
+
+export function writeDetailsOverrides(overrides: ProjectDetailsOverridesFile): void {
+  writeFileSync(detailsOverridesPath, JSON.stringify(overrides, null, 2), "utf-8");
+}
+
+function defaultHealthLabel(h: ProjectHealth): string {
+  if (h === "activo") return "Activo";
+  if (h === "pausado") return "Pausado";
+  return "En riesgo";
+}
+
+function applyDetailsOverrides(projects: ProjectRecord[]): ProjectRecord[] {
+  const o = readDetailsOverrides();
+  const keys = Object.keys(o);
+  if (keys.length === 0) return projects;
+  return projects.map((p) => {
+    const ov = o[p.id];
+    if (!ov) return p;
+    const merged = { ...p, ...ov } as ProjectRecord;
+    if (ov.health !== undefined && ov.healthLabel === undefined) {
+      merged.healthLabel = defaultHealthLabel(ov.health);
+    }
+    return merged;
+  });
+}
+
 function normalizeProjectsPhases(projects: ProjectRecord[]): ProjectRecord[] {
   return projects.map((p) => normalizeProjectRecordPhase(p));
 }
@@ -153,7 +199,16 @@ function mergeProjectsCore(): ProjectRecord[] {
   return [...byId.values()];
 }
 
-export function readProjects(): ProjectRecord[] {
+/** Lectura desde JSON + overrides locales (sin Supabase). */
+export function readMergedProjectsFromJson(): ProjectRecord[] {
   const merged = normalizeProjectsPhases(mergeProjectsCore());
-  return applyOwnerOverrides(applyPhaseOverrides(merged));
+  return applyDetailsOverrides(applyOwnerOverrides(applyPhaseOverrides(merged)));
+}
+
+export async function readProjects(): Promise<ProjectRecord[]> {
+  if (getProjectsDataMode() === "supabase") {
+    const { fetchProjectsFromSupabase } = await import("./services/supabaseProjectRepository.js");
+    return fetchProjectsFromSupabase();
+  }
+  return readMergedProjectsFromJson();
 }
