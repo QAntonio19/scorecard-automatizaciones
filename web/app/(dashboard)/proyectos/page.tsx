@@ -1,88 +1,80 @@
 import { Suspense } from "react";
-import { ApiBackendMissingEnv, ApiBackendUnreachable } from "@/components/deployment/ApiBackendNotice";
-import { KanbanBoardDynamic } from "@/components/proyectos/KanbanBoardDynamic";
-import { ProjectsGallery } from "@/components/proyectos/ProjectsGallery";
-import { ProjectsTable } from "@/components/proyectos/ProjectsTable";
-import { ProyectosToolbar } from "@/components/proyectos/ProyectosToolbar";
-import { parseProyectosSearchParams, toApiProjectsQuery } from "@/lib/proyectosUrl";
-import { fetchPortfolioSummary, fetchProjectsList, isApiNotConfiguredError } from "@/lib/projectsApi";
+import { ItProjectsFilters } from "@/components/it-projects/ItProjectsFilters";
+import { ItProjectsTable } from "@/components/it-projects/ItProjectsTable";
+import {
+  filterItProjects,
+  listItProjects,
+  phaseLabel,
+} from "@/lib/itProjectPortfolio";
+import type { ItProjectPhase } from "@/lib/itProjectTypes";
 
-function flatSearchParams(
-  sp: Record<string, string | string[] | undefined>,
-): Record<string, string | undefined> {
-  const o: Record<string, string | undefined> = {};
-  for (const [k, v] of Object.entries(sp)) {
-    o[k] = Array.isArray(v) ? v[0] : v;
-  }
-  return o;
+const PHASES: ItProjectPhase[] = [
+  "estrategia",
+  "planificacion",
+  "ejecucion",
+  "cierre",
+  "archivado",
+];
+
+function parsePhase(raw: string | undefined): ItProjectPhase | "" {
+  if (!raw) return "";
+  return PHASES.includes(raw as ItProjectPhase) ? (raw as ItProjectPhase) : "";
 }
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function ProyectosPage({ searchParams }: PageProps) {
+export default async function ProyectosPortfolioPage({ searchParams }: PageProps) {
   const raw = await searchParams;
-  const state = parseProyectosSearchParams(flatSearchParams(raw));
-  const apiQuery = toApiProjectsQuery(state);
+  const q = typeof raw.q === "string" ? raw.q : "";
+  const fase = parsePhase(typeof raw.fase === "string" ? raw.fase : undefined);
 
-  let list: Awaited<ReturnType<typeof fetchProjectsList>>;
-  let summary: Awaited<ReturnType<typeof fetchPortfolioSummary>>;
-  try {
-    [list, summary] = await Promise.all([
-      fetchProjectsList(apiQuery),
-      fetchPortfolioSummary(),
-    ]);
-  } catch (e) {
-    if (isApiNotConfiguredError(e)) {
-      return (
-        <div className="px-4 py-6 sm:px-6 lg:px-8">
-          <ApiBackendMissingEnv />
-        </div>
-      );
-    }
-    return (
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
-        <ApiBackendUnreachable />
-      </div>
-    );
-  }
+  const all = listItProjects();
+  const filtered = filterItProjects(all, { q, phase: fase });
+  const inExecution = all.filter((p) => p.phase === "ejecucion").length;
 
   return (
     <div className="space-y-8 px-4 py-6 sm:px-6 lg:px-8">
       <header>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Proyectos</h1>
-        <p className="mt-2 text-sm text-slate-600">Portafolio de automatizaciones ITAI</p>
-        <p className="mt-3 text-sm text-slate-700">
-          <span className="font-semibold text-slate-900">Workflows en cartera:</span>{" "}
-          <span className="tabular-nums">{summary.workflowCounts.n8n}</span> n8n ·{" "}
-          <span className="tabular-nums">{summary.workflowCounts.make}</span> Make ·{" "}
-          <span className="tabular-nums">{summary.workflowCounts.codigo_puro}</span> código puro
+        <p className="mt-2 text-sm text-slate-600">
+          Portafolio de iniciativas IT — alcance, hitos, riesgos y vínculos con el scorecard de flujos.
         </p>
       </header>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">En cartera</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{all.length}</p>
+          <p className="mt-1 text-xs text-slate-500">proyectos registrados (datos de ejemplo)</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+            {phaseLabel("ejecucion")}
+          </p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-sky-800">{inExecution}</p>
+          <p className="mt-1 text-xs text-slate-500">con entregas activas</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Resultado filtro</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{filtered.length}</p>
+          <p className="mt-1 text-xs text-slate-500">coinciden con búsqueda / fase</p>
+        </div>
+      </div>
 
       <Suspense
         fallback={<div className="h-40 animate-pulse rounded-xl border border-slate-200 bg-slate-100" />}
       >
-        <ProyectosToolbar />
+        <ItProjectsFilters />
       </Suspense>
 
       <p className="text-sm font-medium text-slate-600">
-        Mostrando <span className="font-bold text-slate-900">{list.total}</span>{" "}
-        {list.total === 1 ? "proyecto" : "proyectos"}
+        Mostrando <span className="font-bold text-slate-900">{filtered.length}</span>{" "}
+        {filtered.length === 1 ? "proyecto" : "proyectos"}
       </p>
 
-      {list.items.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-600">
-          No hay proyectos con los filtros seleccionados.
-        </div>
-      ) : state.vista === "tabla" ? (
-        <ProjectsTable projects={list.items} />
-      ) : state.vista === "tarjetas" ? (
-        <ProjectsGallery projects={list.items} />
-      ) : (
-        <KanbanBoardDynamic projects={list.items} />
-      )}
+      <ItProjectsTable projects={filtered} />
     </div>
   );
 }

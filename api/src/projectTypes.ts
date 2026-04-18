@@ -52,7 +52,7 @@ export interface PortfolioSummaryResponse {
   activos: number;
   pausados: number;
   enRiesgo: number;
-  /** Workflows / proyectos agrupados por plataforma inferida. */
+  /** Workflows agrupados por plataforma inferida. */
   workflowCounts: WorkflowPlatformCounts;
   categories: string[];
   workload: Array<{ ownerCode: OwnerCode; ownerName: string; count: number }>;

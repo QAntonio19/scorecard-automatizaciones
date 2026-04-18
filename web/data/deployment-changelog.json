@@ -1,0 +1,42 @@
+{
+  "repository": {
+    "owner": "QAntonio19",
+    "name": "scorecard-automatizaciones",
+    "defaultBranch": "main"
+  },
+  "releases": [
+    {
+      "version": "1.7.0",
+      "date": "2026-04-18",
+      "releasedAt": "2026-04-18T18:38:55Z",
+      "changes": [
+        "Sección Proyectos (portafolio IT): /proyectos y ficha /proyectos/[id], tabla con la misma rejilla que Workflows (Proyecto, Fase, Salud, Responsable, Categoría, Pasos, Tasa fallo, Acciones)",
+        "Scorecard de automatizaciones en Workflows: rutas /workflows, Kanban con scroll por columna, textos «flujos» donde aplica; filtros WorkflowsToolbar",
+        "Historial de despliegues en sidebar (modal con portal a document.body; campo releasedAt con fecha y hora en el JSON)",
+        "Panel: lista Requieren atención con scroll y contador; matriz y enlaces a /workflows",
+        "API: respuestas 404 «Workflow no encontrado»; scripts y comentarios alineados a workflows",
+        "next.config: devIndicators false; redirecciones /automatizaciones → /workflows (sin pisar /proyectos)"
+      ]
+    },
+    {
+      "version": "1.6.0",
+      "date": "2026-04-16",
+      "changes": [
+        "Sección scorecard renombrada a Workflows: rutas /workflows, sidebar y textos; /proyectos redirige aquí",
+        "Kanban: scroll vertical independiente por columna con altura acotada al viewport",
+        "Panel — Requieren atención: scroll en la lista, contador de workflows en la cabecera",
+        "Sidebar: pie visible (altura fija al viewport) y versión con historial de despliegues",
+        "Detalle de workflow: edición ampliada de metadatos vía PATCH /api/projects/:id"
+      ]
+    },
+    {
+      "version": "1.5.0",
+      "date": "2026-04-10",
+      "changes": [
+        "Scorecard: fases Kanban, matriz prioridad y lista de atención en el panel",
+        "Sincronización de workflows (n8n / Make) y overrides locales",
+        "API Express con validación Zod y modo Supabase o datos JSON"
+      ]
+    }
+  ]
+}

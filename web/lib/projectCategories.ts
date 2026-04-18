@@ -1,6 +1,6 @@
 /**
- * Categorías oficiales del portafolio (filtro en /proyectos).
- * Deben coincidir con las que uses en los datos de proyectos (`category`).
+ * Categorías oficiales del portafolio (filtro en /workflows).
+ * Deben coincidir con las que uses en los datos de workflows (`category`).
  */
 export const PROJECT_CATEGORIES = [
   "Inteligencia Comercial",

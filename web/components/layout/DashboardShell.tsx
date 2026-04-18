@@ -30,7 +30,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       ) : null}
 
       <div
-        className={`fixed inset-y-0 left-0 z-40 flex lg:static lg:z-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex max-h-[100dvh] lg:static lg:z-0 lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:shrink-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } transition-transform duration-200`}
       >

@@ -91,20 +91,20 @@ function KanbanColumn({
 
   return (
     <section
-      className={`flex min-h-[min(420px,70vh)] flex-col rounded-xl border border-slate-200 bg-white shadow-sm ${col.border} border-t-4`}
+      className={`flex min-h-0 max-h-[min(75vh,calc(100dvh-13rem))] flex-col rounded-xl border border-slate-200 bg-white shadow-sm ${col.border} border-t-4`}
     >
-      <header className="border-b border-slate-100 px-4 py-3">
+      <header className="shrink-0 border-b border-slate-100 px-4 py-3">
         <h2 className="text-sm font-bold text-slate-900">
           {phaseLabel(col.id)}{" "}
           <span className="font-semibold text-slate-500">
-            / {colProjects.length} {colProjects.length === 1 ? "proyecto" : "proyectos"}
+            / {colProjects.length} {colProjects.length === 1 ? "flujo" : "flujos"}
             {suffix}
           </span>
         </h2>
       </header>
       <div
         ref={setNodeRef}
-        className={`flex flex-1 flex-col space-y-3 p-3 transition-colors ${
+        className={`flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto overscroll-contain p-3 [-webkit-overflow-scrolling:touch] transition-colors ${
           isOver ? "bg-sky-50/60 ring-1 ring-inset ring-sky-200/80" : ""
         }`}
       >
@@ -172,7 +172,7 @@ export function KanbanBoard({ projects: initialProjects }: Props) {
       router.refresh();
     } catch (e) {
       setProjects(previous);
-      setError(e instanceof Error ? e.message : "No se pudo mover el proyecto.");
+      setError(e instanceof Error ? e.message : "No se pudo mover el flujo.");
     } finally {
       setPending(false);
     }
@@ -181,7 +181,7 @@ export function KanbanBoard({ projects: initialProjects }: Props) {
   return (
     <div className="space-y-3">
       <p id={dndTitleId} className="sr-only">
-        Tablero Kanban: arrastra una tarjeta a otra columna para cambiar la fase del proyecto.
+        Tablero Kanban: arrastra una tarjeta a otra columna para cambiar la fase del flujo.
       </p>
       {error ? (
         <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900" role="alert">
@@ -201,7 +201,7 @@ export function KanbanBoard({ projects: initialProjects }: Props) {
         onDragCancel={() => setActiveId(null)}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid min-h-0 grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {phases.map((col) => (
             <KanbanColumn key={col.id} col={col} projects={projects} />
           ))}

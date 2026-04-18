@@ -3,11 +3,11 @@ import type {
   AutomationPlatform,
   OwnerCode,
   ProjectHealth,
-  VistaProyectos,
+  VistaWorkflows,
 } from "@/lib/projectTypes";
 
-export type ProyectosSearchState = {
-  vista: VistaProyectos;
+export type WorkflowsSearchState = {
+  vista: VistaWorkflows;
   owners: OwnerCode[];
   health: ProjectHealth[];
   platforms: AutomationPlatform[];
@@ -20,7 +20,7 @@ function joinList<T extends string>(values: T[]): string | undefined {
   return values.join(",");
 }
 
-export function buildProyectosQuery(state: ProyectosSearchState): string {
+export function buildWorkflowsQuery(state: WorkflowsSearchState): string {
   const p = new URLSearchParams();
   if (state.vista !== "kanban") p.set("vista", state.vista);
   const owners = joinList(state.owners);
@@ -35,9 +35,11 @@ export function buildProyectosQuery(state: ProyectosSearchState): string {
   return qs ? `?${qs}` : "";
 }
 
-export function parseProyectosSearchParams(sp: Record<string, string | string[] | undefined>): ProyectosSearchState {
+export function parseWorkflowsSearchParams(
+  sp: Record<string, string | string[] | undefined>,
+): WorkflowsSearchState {
   const vistaRaw = typeof sp.vista === "string" ? sp.vista : undefined;
-  const vista: VistaProyectos =
+  const vista: VistaWorkflows =
     vistaRaw === "tabla" || vistaRaw === "tarjetas" ? vistaRaw : "kanban";
 
   const ownersRaw = typeof sp.owners === "string" ? sp.owners : undefined;
@@ -67,7 +69,7 @@ export function parseProyectosSearchParams(sp: Record<string, string | string[] 
   return { vista, owners, health, platforms, category, q };
 }
 
-export function toApiProjectsQuery(state: ProyectosSearchState): {
+export function toApiProjectsQuery(state: WorkflowsSearchState): {
   owners?: string;
   health?: string;
   platform?: string;

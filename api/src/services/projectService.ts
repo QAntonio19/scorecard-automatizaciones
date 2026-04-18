@@ -70,7 +70,7 @@ export async function listProjects(
 export async function getProjectById(id: string): Promise<ProjectRecord> {
   const found = (await readProjects()).find((p) => p.id === id);
   if (!found) {
-    throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+    throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   }
   return found;
 }
@@ -98,7 +98,7 @@ export async function setProjectOwner(id: string, ownerCode: OwnerCode): Promise
     return getProjectById(id);
   }
   if (!(await readProjects()).some((p) => p.id === id)) {
-    throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+    throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   }
   const { ownerName } = OWNER_PROFILE[ownerCode];
   const overrides = readOwnerOverrides();
@@ -114,7 +114,7 @@ export async function clearProjectOwnerOverride(id: string): Promise<ProjectReco
     return getProjectById(id);
   }
   if (!(await readProjects()).some((p) => p.id === id)) {
-    throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+    throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   }
   const overrides = readOwnerOverrides();
   if (!(id in overrides)) {
@@ -132,7 +132,7 @@ export async function setProjectPhase(id: string, phase: ProjectPhase): Promise<
     return getProjectById(id);
   }
   if (!(await readProjects()).some((p) => p.id === id)) {
-    throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+    throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   }
   const o = readPhaseOverrides();
   const next = { ...o, [id]: phase };
@@ -147,7 +147,7 @@ export async function clearProjectPhaseOverride(id: string): Promise<ProjectReco
     return getProjectById(id);
   }
   if (!(await readProjects()).some((p) => p.id === id)) {
-    throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+    throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   }
   const o = readPhaseOverrides();
   if (!(id in o)) {
@@ -159,7 +159,7 @@ export async function clearProjectPhaseOverride(id: string): Promise<ProjectReco
   return getProjectById(id);
 }
 
-/** Actualiza campos editables del proyecto (JSON: overrides locales; Supabase: fila `workflows`). */
+/** Actualiza campos editables del workflow (JSON: overrides locales; Supabase: fila `workflows`). */
 export async function patchProjectDetails(
   id: string,
   patch: PatchProjectDetailsBody,
@@ -169,7 +169,7 @@ export async function patchProjectDetails(
     return getProjectById(id);
   }
   if (!(await readProjects()).some((p) => p.id === id)) {
-    throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+    throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   }
   const all = readDetailsOverrides();
   const prev = all[id] ?? {};

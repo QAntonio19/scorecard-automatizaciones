@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /** Oculta el icono “N” de desarrollo (esquina inferior). Los errores siguen mostrándose. */
+  devIndicators: false,
   /** Activa URLs relativas /api/* → proxy hacia SCORECARD_API_ORIGIN (sin exponer la URL al cliente). */
   env: {
     NEXT_PUBLIC_SCORECARD_PROXY:
@@ -8,8 +10,8 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      { source: "/automatizaciones", destination: "/proyectos", permanent: false },
-      { source: "/automatizaciones/:id", destination: "/proyectos/:id", permanent: false },
+      { source: "/automatizaciones", destination: "/workflows", permanent: false },
+      { source: "/automatizaciones/:id", destination: "/workflows/:id", permanent: false },
     ];
   },
 };

@@ -12,7 +12,7 @@ export function MetricStrip({ summary }: { summary: PortfolioSummaryResponse }) 
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
       <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-          Total de proyectos
+          Total de workflows
         </p>
         <p className="mt-2 text-4xl font-bold text-slate-900">{summary.total}</p>
         <p className="mt-1 text-xs text-slate-500">Entre 2 miembros del equipo</p>

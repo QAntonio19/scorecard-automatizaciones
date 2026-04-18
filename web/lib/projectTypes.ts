@@ -79,4 +79,4 @@ export interface PortfolioSummaryResponse {
   }>;
 }
 
-export type VistaProyectos = "kanban" | "tabla" | "tarjetas";
+export type VistaWorkflows = "kanban" | "tabla" | "tarjetas";

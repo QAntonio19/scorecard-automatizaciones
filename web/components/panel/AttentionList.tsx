@@ -14,17 +14,26 @@ function badgeClass(health: PortfolioSummaryResponse["attention"][number]["healt
 }
 
 export function AttentionList({ items }: { items: PortfolioSummaryResponse["attention"] }) {
+  const count = items.length;
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-bold text-slate-900">Requieren atención</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 gap-y-1">
+        <h2 className="text-lg font-bold text-slate-900">Requieren atención</h2>
+        <span
+          className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-slate-700 ring-1 ring-slate-200/80"
+          title={`${count} en la lista`}
+        >
+          {count}
+        </span>
+      </div>
       <p className="mt-1 text-sm text-slate-500">
         Priorizado por riesgo, pausas y arranques pendientes.
       </p>
-      <ul className="mt-4 space-y-3">
+      <ul className="mt-4 max-h-[min(30rem,58vh)] list-none space-y-3 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
         {items.map((row) => (
           <li key={row.id}>
             <Link
-              href={`/proyectos/${row.id}`}
+              href={`/workflows/${row.id}`}
               className={`block rounded-lg border border-slate-100 bg-slate-50/60 p-4 transition hover:bg-white hover:shadow-sm border-l-4 ${borderForHealth(
                 row.health,
               )}`}

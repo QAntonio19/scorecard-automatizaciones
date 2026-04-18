@@ -107,7 +107,7 @@ export async function fetchProjectsList(
   const url = `${getApiBaseUrl()}/api/projects${buildQueryString(params)}`;
   /** Sin caché: tras PATCH (fase, responsable) `router.refresh()` debe ver datos al instante. */
   const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`No se pudieron cargar los proyectos (${res.status})`);
+  if (!res.ok) throw new Error(`No se pudieron cargar los workflows (${res.status})`);
   return (await res.json()) as ProjectsListResponse;
 }
 
@@ -145,6 +145,6 @@ export async function fetchProjectById(id: string): Promise<ProjectRecord | null
   const url = `${getApiBaseUrl()}/api/projects/${encodeURIComponent(id)}`;
   const res = await fetch(url, { cache: "no-store" });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`No se pudo cargar el proyecto (${res.status})`);
+  if (!res.ok) throw new Error(`No se pudo cargar el workflow (${res.status})`);
   return (await res.json()) as ProjectRecord;
 }

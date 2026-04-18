@@ -11,7 +11,7 @@ function ownerBadgeClass(code: ProjectRecord["ownerCode"]) {
 export function ProjectKanbanCard({ project }: { project: ProjectRecord }) {
   return (
     <Link
-      href={`/proyectos/${project.id}`}
+      href={`/workflows/${project.id}`}
       className="block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-sm"
     >
       <div className="flex items-start justify-between gap-2">

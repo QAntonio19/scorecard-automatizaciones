@@ -7,7 +7,7 @@ import type { PatchProjectDetailsBody } from "./projectValidation.js";
 
 type ProjectsDataMode = "merged" | "external_only" | "json_only" | "supabase";
 
-/** Responsable persistido por id de proyecto (sobrevive a sync n8n/Make). */
+/** Responsable persistido por id de workflow (sobrevive a sync n8n/Make). */
 export type OwnerOverrideEntry = { ownerCode: OwnerCode; ownerName: string };
 
 export type OwnerOverridesFile = Record<string, OwnerOverrideEntry>;
@@ -113,7 +113,7 @@ export function writePhaseOverrides(overrides: PhaseOverridesFile): void {
   writeFileSync(phaseOverridesPath, JSON.stringify(overrides, null, 2), "utf-8");
 }
 
-/** Overrides de campos editables (nombre, métricas, notas, etc.) por id de proyecto. */
+/** Overrides de campos editables (nombre, métricas, notas, etc.) por id de workflow. */
 export type ProjectDetailsOverridesFile = Record<string, Partial<PatchProjectDetailsBody>>;
 
 export function readDetailsOverrides(): ProjectDetailsOverridesFile {

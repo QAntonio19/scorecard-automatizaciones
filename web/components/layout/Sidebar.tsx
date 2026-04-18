@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconFolder, IconPanel } from "@/components/icons/NavIcons";
+import { useState } from "react";
+import { IconBriefcase, IconFolder, IconPanel } from "@/components/icons/NavIcons";
+import { DeploymentChangelogModal } from "@/components/layout/DeploymentChangelogModal";
+import { getCurrentVersion } from "@/lib/deploymentChangelog";
 
 const nav = [
   { href: "/panel", label: "Panel", Icon: IconPanel },
-  { href: "/proyectos", label: "Proyectos", Icon: IconFolder },
+  { href: "/workflows", label: "Workflows", Icon: IconFolder },
+  { href: "/proyectos", label: "Proyectos", Icon: IconBriefcase },
 ] as const;
 
 function NavLink({
@@ -54,9 +58,12 @@ export function Sidebar({
   collapsed: boolean;
   onNavigate?: () => void;
 }) {
+  const [changelogOpen, setChangelogOpen] = useState(false);
+  const currentVersion = getCurrentVersion();
+
   return (
     <aside
-      className={`flex h-full shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-200 ${
+      className={`flex h-full min-h-0 max-h-full shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-200 ${
         collapsed ? "w-[72px]" : "w-64"
       }`}
     >
@@ -70,13 +77,13 @@ export function Sidebar({
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-900">ExpertizITAI</p>
             <p className="truncate text-xs font-medium uppercase tracking-wide text-slate-500">
-              Proyectos ITAI
+              Workflows ITAI
             </p>
           </div>
         ) : null}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
         <p
           className={`mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 ${
             collapsed ? "sr-only" : ""
@@ -91,7 +98,9 @@ export function Sidebar({
         </nav>
       </div>
 
-      <div className={`mt-auto space-y-3 border-t border-slate-100 p-3 ${collapsed ? "px-2" : ""}`}>
+      <div
+        className={`mt-auto shrink-0 space-y-3 border-t border-slate-100 p-3 pb-4 ${collapsed ? "px-2" : ""}`}
+      >
         <div
           className={`flex items-center gap-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100 ${
             collapsed ? "justify-center p-2" : ""
@@ -108,11 +117,18 @@ export function Sidebar({
           ) : null}
         </div>
         <div className={collapsed ? "flex justify-center" : ""}>
-          <span className="inline-flex rounded-lg bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 ring-1 ring-sky-100">
-            v1.5
-          </span>
+          <button
+            type="button"
+            title="Historial de versiones y despliegues"
+            onClick={() => setChangelogOpen(true)}
+            className="inline-flex rounded-lg bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 ring-1 ring-sky-100 transition hover:bg-sky-100 hover:ring-sky-200"
+          >
+            v{currentVersion}
+          </button>
         </div>
       </div>
+
+      <DeploymentChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </aside>
   );
 }

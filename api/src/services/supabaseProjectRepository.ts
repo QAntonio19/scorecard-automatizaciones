@@ -192,7 +192,7 @@ async function getResponsableIdForCode(ownerCode: OwnerCode): Promise<string> {
 
 export async function supabaseSetOwnerOverride(projectId: string, ownerCode: OwnerCode): Promise<void> {
   const pk = await resolveWorkflowPk(projectId);
-  if (!pk) throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+  if (!pk) throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   const rid = await getResponsableIdForCode(ownerCode);
   const sb = getSupabaseServerClient();
   const { error } = await sb.from("workflows").update({ owner_override_id: rid }).eq("id", pk);
@@ -201,7 +201,7 @@ export async function supabaseSetOwnerOverride(projectId: string, ownerCode: Own
 
 export async function supabaseClearOwnerOverride(projectId: string): Promise<void> {
   const pk = await resolveWorkflowPk(projectId);
-  if (!pk) throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+  if (!pk) throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   const sb = getSupabaseServerClient();
   const { error } = await sb.from("workflows").update({ owner_override_id: null }).eq("id", pk);
   if (error) throw new HttpError(500, "SUPABASE_ERROR", error.message);
@@ -209,7 +209,7 @@ export async function supabaseClearOwnerOverride(projectId: string): Promise<voi
 
 export async function supabaseSetPhaseOverride(projectId: string, phase: ProjectPhase): Promise<void> {
   const pk = await resolveWorkflowPk(projectId);
-  if (!pk) throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+  if (!pk) throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   const sb = getSupabaseServerClient();
   const { error } = await sb.from("workflows").update({ fase_override: phase }).eq("id", pk);
   if (error) throw new HttpError(500, "SUPABASE_ERROR", error.message);
@@ -217,7 +217,7 @@ export async function supabaseSetPhaseOverride(projectId: string, phase: Project
 
 export async function supabaseClearPhaseOverride(projectId: string): Promise<void> {
   const pk = await resolveWorkflowPk(projectId);
-  if (!pk) throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+  if (!pk) throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   const sb = getSupabaseServerClient();
   const { error } = await sb.from("workflows").update({ fase_override: null }).eq("id", pk);
   if (error) throw new HttpError(500, "SUPABASE_ERROR", error.message);
@@ -234,7 +234,7 @@ export async function supabasePatchWorkflowDetails(
   patch: PatchProjectDetailsBody,
 ): Promise<void> {
   const pk = await resolveWorkflowPk(projectId);
-  if (!pk) throw new HttpError(404, "NOT_FOUND", "Proyecto no encontrado.");
+  if (!pk) throw new HttpError(404, "NOT_FOUND", "Workflow no encontrado.");
   const sb = getSupabaseServerClient();
   const row: Record<string, unknown> = {};
   if (patch.name !== undefined) row.nombre = patch.name;

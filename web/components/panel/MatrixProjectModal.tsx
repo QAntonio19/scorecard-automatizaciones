@@ -150,10 +150,10 @@ export function MatrixProjectModal({ open, onClose, point, onSave }: Props) {
             Guardar cambios
           </button>
           <Link
-            href={`/proyectos/${point.id}`}
+            href={`/workflows/${point.id}`}
             className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
           >
-            Ver proyecto
+            Ver workflow
             <span aria-hidden>→</span>
           </Link>
         </footer>

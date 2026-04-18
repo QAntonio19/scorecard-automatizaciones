@@ -1,5 +1,5 @@
 /**
- * Importa a Supabase todos los proyectos que la app lee desde JSON fusionado
+ * Importa a Supabase todos los workflows que la app lee desde JSON fusionado
  * (projects.json + external-projects.json + overrides en projectStore).
  *
  * Uso: cd api && npx tsx scripts/import-workflows-to-supabase.ts
@@ -110,7 +110,7 @@ async function wipeWorkflowData(sb: ReturnType<typeof getSupabaseServerClient>):
 
 async function main(): Promise<void> {
   const projects = readMergedProjectsFromJson();
-  console.log(`Proyectos en JSON (fusionados): ${projects.length}`);
+  console.log(`Workflows en JSON (fusionados): ${projects.length}`);
 
   const sb = getSupabaseServerClient();
   const plataformaByNombre = await loadPlataformaIds(sb);
@@ -180,7 +180,7 @@ async function main(): Promise<void> {
           wpRows.push({ workflow_id: wid, plataforma_id: platId });
         }
       } else {
-        console.warn("Plataforma no en catálogo:", platKey, "proyecto", p.id);
+        console.warn("Plataforma no en catálogo:", platKey, "workflow", p.id);
       }
       const techSeen = new Set<string>();
       for (const tn of p.technologies ?? []) {

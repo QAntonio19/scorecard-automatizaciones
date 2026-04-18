@@ -8,17 +8,17 @@ import type {
   AutomationPlatform,
   OwnerCode,
   ProjectHealth,
-  VistaProyectos,
+  VistaWorkflows,
 } from "@/lib/projectTypes";
 import { PROJECT_CATEGORIES } from "@/lib/projectCategories";
-import { toApiProjectsQuery, buildProyectosQuery, parseProyectosSearchParams } from "@/lib/proyectosUrl";
+import { toApiProjectsQuery, buildWorkflowsQuery, parseWorkflowsSearchParams } from "@/lib/workflowsUrl";
 
 function readState(sp: URLSearchParams) {
   const raw: Record<string, string | undefined> = {};
   sp.forEach((v, k) => {
     if (raw[k] === undefined) raw[k] = v;
   });
-  return parseProyectosSearchParams(raw);
+  return parseWorkflowsSearchParams(raw);
 }
 
 function toggleSingleOwner(current: OwnerCode[], code: OwnerCode): OwnerCode[] {
@@ -42,7 +42,7 @@ function mergePlatform(
 const chipBase =
   "rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ring-inset transition-colors";
 
-export function ProyectosToolbar() {
+export function WorkflowsToolbar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
@@ -53,15 +53,15 @@ export function ProyectosToolbar() {
 
   const push = (next: ReturnType<typeof readState>) => {
     startTransition(() => {
-      router.push(`/proyectos${buildProyectosQuery(next)}`);
+      router.push(`/workflows${buildWorkflowsQuery(next)}`);
     });
   };
 
-  const vistaBtn = (v: VistaProyectos, label: string) => {
+  const vistaBtn = (v: VistaWorkflows, label: string) => {
     const active = state.vista === v;
     return (
       <Link
-        href={`/proyectos${buildProyectosQuery({ ...state, vista: v })}`}
+        href={`/workflows${buildWorkflowsQuery({ ...state, vista: v })}`}
         className={`rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide transition ${
           active
             ? "bg-sky-700 text-white shadow-sm"
