@@ -53,7 +53,8 @@ export function setProjectWorkflowLinks(projectId: string, workflowIds: string[]
 export function clearProjectWorkflowLinksOverride(projectId: string): void {
   const cur = readWorkflowLinkOverrides();
   if (!(projectId in cur)) return;
-  const { [projectId]: _, ...rest } = cur;
+  const rest = { ...cur };
+  delete rest[projectId];
   writeWorkflowLinkOverrides(rest);
   window.dispatchEvent(new CustomEvent(IT_PROJECT_WORKFLOW_LINKS_CHANGED_EVENT));
 }

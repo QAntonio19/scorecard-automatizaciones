@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      /** Evita un round-trip extra por redirect() en app/page.tsx. */
+      { source: "/", destination: "/panel", permanent: false },
       { source: "/automatizaciones", destination: "/workflows", permanent: false },
       { source: "/automatizaciones/:id", destination: "/workflows/:id", permanent: false },
     ];

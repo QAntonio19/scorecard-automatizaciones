@@ -6,6 +6,17 @@
   },
   "releases": [
     {
+      "version": "1.9.0",
+      "date": "2026-04-21",
+      "releasedAt": "2026-04-21T12:00:00Z",
+      "changes": [
+        "Rendimiento — panel (/panel): streaming con Suspense y PanelPageSkeleton mientras responde la API; ya no se bloquea toda la vista hasta el fetch del resumen",
+        "Rendimiento — (dashboard)/loading.tsx: feedback inmediato al navegar entre rutas del dashboard",
+        "Rendimiento — redirección / → /panel en next.config (sin app/page.tsx) para un salto menos en la raíz",
+        "Despliegue producción Vercel (web) alineado con esta versión"
+      ]
+    },
+    {
       "version": "1.8.0",
       "date": "2026-04-20",
       "releasedAt": "2026-04-20T12:00:00Z",
