@@ -4,23 +4,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import type { ItProjectPhase } from "@/lib/itProjectTypes";
-import { phaseLabel } from "@/lib/itProjectPortfolio";
+import { IT_PROJECT_PHASE_ORDER, phaseLabel } from "@/lib/itProjectPortfolio";
+import { buildItProjectsQuery, parseVistaProyectosIt } from "@/lib/itProjectsUrl";
 
-const phases: ItProjectPhase[] = [
-  "estrategia",
-  "planificacion",
-  "ejecucion",
-  "cierre",
-  "archivado",
-];
-
-function buildQuery(next: { q?: string; fase?: string }): string {
-  const p = new URLSearchParams();
-  if (next.q?.trim()) p.set("q", next.q.trim());
-  if (next.fase?.trim()) p.set("fase", next.fase.trim());
-  const s = p.toString();
-  return s ? `?${s}` : "";
-}
+const phases = IT_PROJECT_PHASE_ORDER;
 
 const chipBase =
   "rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ring-inset transition-colors";
@@ -31,6 +18,7 @@ export function ItProjectsFilters() {
   const [pending, startTransition] = useTransition();
   const qInit = searchParams.get("q") ?? "";
   const faseInit = searchParams.get("fase") ?? "";
+  const vista = parseVistaProyectosIt(searchParams.get("vista") ?? undefined);
   const [q, setQ] = useState(qInit);
 
   useEffect(() => {
@@ -40,10 +28,18 @@ export function ItProjectsFilters() {
   const apply = useCallback(
     (nextQ: string, nextFase: string) => {
       startTransition(() => {
-        router.push(`/proyectos${buildQuery({ q: nextQ, fase: nextFase })}`);
+        const fase =
+          phases.includes(nextFase as ItProjectPhase) ? (nextFase as ItProjectPhase) : undefined;
+        router.push(
+          `/proyectos${buildItProjectsQuery({
+            q: nextQ,
+            fase,
+            vista,
+          })}`,
+        );
       });
     },
-    [router],
+    [router, vista],
   );
 
   return (
@@ -78,7 +74,7 @@ export function ItProjectsFilters() {
       <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2">
         <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Fase</span>
         <Link
-          href="/proyectos"
+          href={`/proyectos${buildItProjectsQuery({ q: qInit, vista })}`}
           scroll={false}
           className={`${chipBase} ${
             !faseInit
@@ -93,7 +89,7 @@ export function ItProjectsFilters() {
           return (
             <Link
               key={ph}
-              href={`/proyectos${buildQuery({ q: qInit, fase: ph })}`}
+              href={`/proyectos${buildItProjectsQuery({ q: qInit, fase: ph, vista })}`}
               scroll={false}
               className={`${chipBase} ${
                 active

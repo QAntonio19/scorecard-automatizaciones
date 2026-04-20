@@ -1,17 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ItProjectCard } from "@/components/it-projects/ItProjectCard";
 import type { ItProject } from "@/lib/itProjectTypes";
-import { phaseLabel, riskLabel } from "@/lib/itProjectPortfolio";
 
-/**
- * Misma rejilla y cabeceras que `ProjectsTable` (Workflows): Proyecto, Fase, Salud, Responsable,
- * Categoría, Pasos, Tasa fallo, Acciones. Solo cambia el origen de los datos.
- */
 type SortKey = "name" | "phase" | "risk" | "pm" | "sponsor" | "steps";
 
-function sortString(p: ItProject, key: Exclude<SortKey, "steps" | "linked">): string {
+function sortString(p: ItProject, key: Exclude<SortKey, "steps">): string {
   switch (key) {
     case "name":
       return p.name;
@@ -39,7 +34,7 @@ export function ItProjectsTable({ projects }: { projects: ItProject[] }) {
       if (sortKey === "steps") {
         return (a.milestones.length - b.milestones.length) * sign;
       }
-      const textKey = sortKey as Exclude<SortKey, "steps" | "linked">;
+      const textKey = sortKey as Exclude<SortKey, "steps">;
       const av = sortString(a, textKey);
       const bv = sortString(b, textKey);
       return av.localeCompare(bv, "es-MX") * sign;
@@ -55,17 +50,19 @@ export function ItProjectsTable({ projects }: { projects: ItProject[] }) {
     }
   };
 
-  const th = (key: SortKey, label: string) => (
-    <th className="px-3 py-2 text-left">
-      <button
-        type="button"
-        onClick={() => toggle(key)}
-        className="text-[11px] font-bold uppercase tracking-wide text-slate-500 hover:text-slate-800"
-      >
-        {label}
-        {sortKey === key ? (dir === "asc" ? " ↑" : " ↓") : ""}
-      </button>
-    </th>
+  const sortBtn = (key: SortKey, label: string) => (
+    <button
+      type="button"
+      onClick={() => toggle(key)}
+      className={`rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+        sortKey === key
+          ? "bg-slate-900 text-white"
+          : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+      }`}
+    >
+      {label}
+      {sortKey === key ? (dir === "asc" ? " ↑" : " ↓") : ""}
+    </button>
   );
 
   if (projects.length === 0) {
@@ -77,46 +74,29 @@ export function ItProjectsTable({ projects }: { projects: ItProject[] }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-left text-xs">
-          <tr className="border-b border-slate-200">
-            {th("name", "Proyecto")}
-            {th("phase", "Fase")}
-            {th("risk", "Salud")}
-            {th("pm", "Responsable")}
-            {th("sponsor", "Categoría")}
-            {th("steps", "Pasos")}
-            <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">
-              Tasa fallo
-            </th>
-            <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-slate-500">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((p) => (
-            <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/80">
-              <td className="px-3 py-3 font-semibold text-slate-900">{p.name}</td>
-              <td className="px-3 py-3 text-slate-600">{phaseLabel(p.phase)}</td>
-              <td className="px-3 py-3 text-slate-600">{riskLabel(p.riskLevel)}</td>
-              <td className="px-3 py-3 text-slate-600">{p.pmName}</td>
-              <td className="px-3 py-3 text-slate-600">{p.sponsor}</td>
-              <td className="px-3 py-3 text-slate-600">{p.milestones.length}</td>
-              <td className="px-3 py-3 text-slate-600">—</td>
-              <td className="px-3 py-3 text-right">
-                <Link
-                  href={`/proyectos/${p.id}`}
-                  className="text-sm font-semibold text-sky-800 hover:text-sky-950"
-                >
-                  Ver
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm border-t-4 border-t-slate-400">
+        <header className="border-b border-slate-100 px-4 py-3">
+          <h2 className="text-sm font-bold text-slate-900">
+            Tabla{" "}
+            <span className="font-semibold text-slate-500">
+              / {projects.length} {projects.length === 1 ? "proyecto" : "proyectos"}
+            </span>
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {sortBtn("name", "Proyecto")}
+            {sortBtn("phase", "Fase")}
+            {sortBtn("risk", "Salud")}
+            {sortBtn("pm", "Resp.")}
+            {sortBtn("sponsor", "Categoría")}
+            {sortBtn("steps", "Pasos")}
+          </div>
+        </header>
+      </div>
+
+      {rows.map((p) => (
+        <ItProjectCard key={p.id} project={p} phaseBorderOnCard />
+      ))}
     </div>
   );
 }

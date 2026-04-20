@@ -21,3 +21,15 @@ export const KANBAN_PHASE_ORDER: ProjectPhase[] = [
   "terminados",
   "archivado",
 ];
+
+/** Clase `border-t-*` alineada con las columnas del Kanban (borde superior de acento). */
+export function workflowPhaseTopBorderClass(phase: ProjectPhase): string {
+  const map: Record<ProjectPhase, string> = {
+    backlog: "border-t-slate-400",
+    por_iniciar: "border-t-amber-400",
+    en_proceso: "border-t-sky-500",
+    terminados: "border-t-emerald-500",
+    archivado: "border-t-slate-500",
+  };
+  return map[phase];
+}

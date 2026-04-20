@@ -1,12 +1,7 @@
 import Link from "next/link";
 import type { ProjectRecord } from "@/lib/projectTypes";
 import { HealthDot } from "@/components/proyectos/HealthDot";
-
-function ownerBadgeClass(code: ProjectRecord["ownerCode"]) {
-  return code === "JA"
-    ? "bg-violet-50 text-violet-800 ring-violet-100"
-    : "bg-sky-50 text-sky-800 ring-sky-100";
-}
+import { workflowOwnerChipClass } from "@/components/proyectos/workflowOwnerChip";
 
 export function ProjectKanbanCard({ project }: { project: ProjectRecord }) {
   return (
@@ -48,7 +43,7 @@ export function ProjectKanbanCard({ project }: { project: ProjectRecord }) {
       ) : null}
       <div className="mt-3 flex items-center justify-between gap-2">
         <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ring-inset ${ownerBadgeClass(
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ring-inset ${workflowOwnerChipClass(
             project.ownerCode,
           )}`}
         >

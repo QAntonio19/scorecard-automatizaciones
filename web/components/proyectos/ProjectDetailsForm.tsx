@@ -5,7 +5,11 @@ import { useEffect, useState } from "react";
 import { getApiBaseUrl } from "@/lib/projectsApi";
 import type { ProjectHealth, ProjectRecord } from "@/lib/projectTypes";
 
-type Props = { project: ProjectRecord };
+type Props = {
+  project: ProjectRecord;
+  /** Llamado tras guardar correctamente (p. ej. cerrar modal). */
+  onSaved?: () => void;
+};
 
 async function errorMessageFromResponse(res: Response): Promise<string> {
   const text = await res.text();
@@ -23,7 +27,7 @@ const inputClass =
 
 const labelClass = "text-[11px] font-bold uppercase tracking-wider text-slate-400";
 
-export function ProjectDetailsForm({ project }: Props) {
+export function ProjectDetailsForm({ project, onSaved }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +117,7 @@ export function ProjectDetailsForm({ project }: Props) {
       }
       setOk(true);
       router.refresh();
+      onSaved?.();
       window.setTimeout(() => setOk(false), 4000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar.");

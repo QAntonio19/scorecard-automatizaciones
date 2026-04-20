@@ -1,1 +1,16 @@
-{}
+{
+  "n8n-JrrnfhmKG9V73J5F": {
+    "name": "Recover Leads",
+    "description": "Sincronizado automáticamente desde n8n.",
+    "category": "Automatización n8n",
+    "complexity": 5,
+    "businessValue": 6,
+    "steps": 0,
+    "progress": 15,
+    "schedule": "Pausado en n8n",
+    "failureRate": null,
+    "riskNote": null,
+    "health": "pausado",
+    "healthLabel": "Pausado"
+  }
+}

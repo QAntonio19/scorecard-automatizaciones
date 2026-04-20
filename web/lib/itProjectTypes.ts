@@ -25,6 +25,7 @@ export interface ItProject {
   startDate: string;
   targetEndDate: string;
   riskLevel: ItProjectRisk;
+  /** IDs de filas en el scorecard de Workflows (`/workflows/[id]`). */
   linkedWorkflowIds: string[];
   milestones: ItProjectMilestone[];
 }

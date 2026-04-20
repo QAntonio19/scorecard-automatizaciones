@@ -16,23 +16,20 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useState } from "react";
-import { phaseLabel } from "@/lib/phaseLabels";
+import { phaseLabel, workflowPhaseTopBorderClass } from "@/lib/phaseLabels";
 import { getApiBaseUrl } from "@/lib/projectsApi";
 import type { ProjectPhase, ProjectRecord } from "@/lib/projectTypes";
 import { ProjectKanbanCard } from "@/components/proyectos/ProjectKanbanCard";
 
-const phases: Array<{
-  id: ProjectPhase;
-  border: string;
-}> = [
-  { id: "backlog", border: "border-t-slate-400" },
-  { id: "por_iniciar", border: "border-t-amber-400" },
-  { id: "en_proceso", border: "border-t-sky-500" },
-  { id: "terminados", border: "border-t-emerald-500" },
-  { id: "archivado", border: "border-t-slate-500" },
+const phases: ProjectPhase[] = [
+  "backlog",
+  "por_iniciar",
+  "en_proceso",
+  "terminados",
+  "archivado",
 ];
 
-const PHASE_SET = new Set<ProjectPhase>(phases.map((c) => c.id));
+const PHASE_SET = new Set<ProjectPhase>(phases);
 
 function resolveDropPhase(overId: string, items: ProjectRecord[]): ProjectPhase | null {
   if (PHASE_SET.has(overId as ProjectPhase)) return overId as ProjectPhase;
@@ -80,22 +77,24 @@ function KanbanColumn({
   col,
   projects,
 }: {
-  col: (typeof phases)[number];
+  col: ProjectPhase;
   projects: ProjectRecord[];
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: col.id });
-  const colProjects = projects.filter((p) => p.phase === col.id);
+  const { setNodeRef, isOver } = useDroppable({ id: col });
+  const colProjects = projects.filter((p) => p.phase === col);
   const atRisk = colProjects.filter((p) => p.health === "en_riesgo").length;
   const suffix =
-    col.id === "en_proceso" && atRisk > 0 ? ` — ${atRisk} en riesgo` : "";
+    col === "en_proceso" && atRisk > 0 ? ` — ${atRisk} en riesgo` : "";
 
   return (
     <section
-      className={`flex min-h-0 max-h-[min(75vh,calc(100dvh-13rem))] flex-col rounded-xl border border-slate-200 bg-white shadow-sm ${col.border} border-t-4`}
+      className={`flex min-h-0 max-h-[min(75vh,calc(100dvh-13rem))] flex-col rounded-xl border border-slate-200 bg-white shadow-sm ${workflowPhaseTopBorderClass(
+        col,
+      )} border-t-4`}
     >
       <header className="shrink-0 border-b border-slate-100 px-4 py-3">
         <h2 className="text-sm font-bold text-slate-900">
-          {phaseLabel(col.id)}{" "}
+          {phaseLabel(col)}{" "}
           <span className="font-semibold text-slate-500">
             / {colProjects.length} {colProjects.length === 1 ? "flujo" : "flujos"}
             {suffix}
@@ -203,7 +202,7 @@ export function KanbanBoard({ projects: initialProjects }: Props) {
       >
         <div className="grid min-h-0 grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {phases.map((col) => (
-            <KanbanColumn key={col.id} col={col} projects={projects} />
+            <KanbanColumn key={col} col={col} projects={projects} />
           ))}
         </div>
         <DragOverlay dropAnimation={null}>

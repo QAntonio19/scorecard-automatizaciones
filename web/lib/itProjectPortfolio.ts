@@ -27,6 +27,15 @@ export function phaseLabel(phase: ItProjectPhase): string {
   return map[phase];
 }
 
+/** Orden de columnas en el Kanban de proyectos IT (izquierda → derecha). */
+export const IT_PROJECT_PHASE_ORDER: ItProjectPhase[] = [
+  "estrategia",
+  "planificacion",
+  "ejecucion",
+  "cierre",
+  "archivado",
+];
+
 export function riskLabel(risk: ItProjectRisk): string {
   const map: Record<ItProjectRisk, string> = {
     bajo: "Bajo",
@@ -34,6 +43,18 @@ export function riskLabel(risk: ItProjectRisk): string {
     alto: "Alto",
   };
   return map[risk];
+}
+
+/** Misma lógica visual que `workflowPhaseTopBorderClass` en flujos (acento por fase). */
+export function itPhaseTopBorderClass(phase: ItProjectPhase): string {
+  const map: Record<ItProjectPhase, string> = {
+    estrategia: "border-t-slate-400",
+    planificacion: "border-t-amber-400",
+    ejecucion: "border-t-sky-500",
+    cierre: "border-t-emerald-500",
+    archivado: "border-t-slate-500",
+  };
+  return map[phase];
 }
 
 export function filterItProjects(

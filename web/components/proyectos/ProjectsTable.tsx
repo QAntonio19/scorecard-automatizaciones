@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { phaseLabel } from "@/lib/phaseLabels";
+import { HealthDot } from "@/components/proyectos/HealthDot";
+import { workflowOwnerChipClass } from "@/components/proyectos/workflowOwnerChip";
+import { phaseLabel, workflowPhaseTopBorderClass } from "@/lib/phaseLabels";
 import type { ProjectRecord } from "@/lib/projectTypes";
 
 type SortKey = "name" | "phase" | "health" | "owner" | "category" | "steps" | "failureRate";
@@ -54,60 +56,114 @@ export function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
     }
   };
 
-  const th = (key: SortKey, label: string) => (
-    <th className="px-3 py-2 text-left">
-      <button
-        type="button"
-        onClick={() => toggle(key)}
-        className="text-[11px] font-bold uppercase tracking-wide text-slate-500 hover:text-slate-800"
-      >
-        {label}
-        {sortKey === key ? (dir === "asc" ? " ↑" : " ↓") : ""}
-      </button>
-    </th>
+  const sortBtn = (key: SortKey, label: string) => (
+    <button
+      type="button"
+      onClick={() => toggle(key)}
+      className={`rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+        sortKey === key
+          ? "bg-slate-900 text-white"
+          : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+      }`}
+    >
+      {label}
+      {sortKey === key ? (dir === "asc" ? " ↑" : " ↓") : ""}
+    </button>
   );
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-left text-xs">
-          <tr className="border-b border-slate-200">
-            {th("name", "Workflow")}
-            {th("phase", "Fase")}
-            {th("health", "Salud")}
-            {th("owner", "Responsable")}
-            {th("category", "Categoría")}
-            {th("steps", "Pasos")}
-            {th("failureRate", "Tasa fallo")}
-            <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-slate-500">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((p) => (
-            <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/80">
-              <td className="px-3 py-3 font-semibold text-slate-900">{p.name}</td>
-              <td className="px-3 py-3 text-slate-600">{phaseLabel(p.phase)}</td>
-              <td className="px-3 py-3 text-slate-600">{p.healthLabel}</td>
-              <td className="px-3 py-3 text-slate-600">{p.ownerName}</td>
-              <td className="px-3 py-3 text-slate-600">{p.category}</td>
-              <td className="px-3 py-3 text-slate-600">{p.steps}</td>
-              <td className="px-3 py-3 text-slate-600">
-                {p.failureRate != null ? `${p.failureRate.toFixed(2)}%` : "—"}
-              </td>
-              <td className="px-3 py-3 text-right">
-                <Link
-                  href={`/workflows/${p.id}`}
-                  className="text-sm font-semibold text-sky-800 hover:text-sky-950"
-                >
-                  Ver
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm border-t-4 border-t-slate-400">
+        <header className="border-b border-slate-100 px-4 py-3">
+          <h2 className="text-sm font-bold text-slate-900">
+            Tabla{" "}
+            <span className="font-semibold text-slate-500">
+              / {projects.length} {projects.length === 1 ? "flujo" : "flujos"}
+            </span>
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {sortBtn("name", "Workflow")}
+            {sortBtn("phase", "Fase")}
+            {sortBtn("health", "Salud")}
+            {sortBtn("owner", "Resp.")}
+            {sortBtn("category", "Categoría")}
+            {sortBtn("steps", "Pasos")}
+            {sortBtn("failureRate", "Tasa fallo")}
+          </div>
+        </header>
+      </div>
+
+      {rows.map((p) => (
+        <Link
+          key={p.id}
+          href={`/workflows/${p.id}`}
+          className={`block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-sm ${workflowPhaseTopBorderClass(
+            p.phase,
+          )} border-t-4`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-sm font-bold text-slate-900">{p.name}</h3>
+            <HealthDot health={p.health} />
+          </div>
+          <p className="mt-2 line-clamp-2 text-xs text-slate-600">{p.description}</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full ${
+                p.health === "en_riesgo"
+                  ? "bg-rose-400"
+                  : p.health === "pausado"
+                    ? "bg-amber-300"
+                    : "bg-sky-500"
+              }`}
+              style={{ width: `${Math.min(100, Math.max(0, p.progress))}%` }}
+            />
+          </div>
+          {p.failureRate != null && p.health === "en_riesgo" ? (
+            <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-800 ring-1 ring-rose-100">
+              <span aria-hidden>⚠️</span> Fallo: {p.failureRate.toFixed(2)}%
+            </p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
+            <span className="font-semibold text-slate-600">{p.steps} pasos</span>
+            <span className="text-slate-300">·</span>
+            <span>{p.schedule}</span>
+          </div>
+          {p.riskNote && p.health === "en_riesgo" ? (
+            <p className="mt-2 rounded-md bg-rose-50/80 p-2 text-[11px] leading-snug text-rose-900 ring-1 ring-rose-100">
+              {p.riskNote}
+            </p>
+          ) : null}
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+            <span className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200">
+              {phaseLabel(p.phase)}
+            </span>
+            <span className="text-[11px] text-slate-600">{p.healthLabel}</span>
+            <span className="text-slate-300">·</span>
+            <span className="truncate text-[11px] text-slate-600">{p.category}</span>
+            <span className="text-slate-300">·</span>
+            <span className="text-[11px] text-slate-600">
+              {p.failureRate != null ? `${p.failureRate.toFixed(2)}%` : "—"} fallo
+            </span>
+            <span className="ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ring-inset text-sky-800 ring-sky-200 bg-sky-50">
+              Ver →
+            </span>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ring-inset ${workflowOwnerChipClass(
+                p.ownerCode,
+              )}`}
+            >
+              {p.ownerCode === "JA" ? "Juan" : "Evelyn"}
+            </span>
+            <span className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 ring-1 ring-slate-200">
+              {p.platform ?? p.technologies[0] ?? "—"}
+            </span>
+          </div>
+        </Link>
+      ))}
     </div>
   );
 }
