@@ -6,6 +6,19 @@
   },
   "releases": [
     {
+      "version": "1.8.0",
+      "date": "2026-04-20",
+      "releasedAt": "2026-04-20T12:00:00Z",
+      "changes": [
+        "Workflows — vista Tabla: tarjetas alineadas al diseño Kanban (fase con borde de acento, salud, barra de progreso, badges)",
+        "Proyectos IT (/proyectos): tablero Kanban por fase (Estrategia → Archivado), conmutador Kanban/Tabla; datos fusionados con proyectos creados en el navegador",
+        "Proyectos — crear iniciativa: ruta /proyectos/nuevo, botón «Nuevo proyecto» y persistencia en localStorage hasta API dedicada",
+        "Proyectos — vínculos a workflows: IDs del scorecard en ficha (catálogo desde API o ID manual), overrides en localStorage; campo opcional al crear proyecto",
+        "Detalle de workflow (/workflows/[id]): ficha en solo lectura; fase, responsable y formulario de métricas dentro de un modal; botón «Editar» en la barra superior junto a «Volver a workflows»",
+        "ProjectDetailsForm: callback onSaved para cerrar el modal tras guardar; helpers compartidos (borde por fase workflow, chip de responsable)"
+      ]
+    },
+    {
       "version": "1.7.0",
       "date": "2026-04-18",
       "releasedAt": "2026-04-18T18:38:55Z",
