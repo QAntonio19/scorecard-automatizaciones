@@ -15,7 +15,14 @@
         "Autenticación — middleware: rutas /panel, /workflows y /proyectos protegidas; / y sesión se redirigen a login o panel; cookies de sesión copiadas en redirects (refresh de token)",
         "Autenticación — modo sin Supabase: sin URL/anon key el middleware no bloquea (desarrollo local); app/page.tsx redirige / → /panel",
         "UX — sidebar: bloque de usuario con nombre, rol y letra (metadata Auth o getUserDisplayInfo); «Cerrar sesión»; sin Supabase muestra aviso de invitado",
-        "Config — web/lib/supabase (client, server), web/lib/authDisplay; web/.env.example documenta variables y callback en Supabase",
+        "Config — web/lib/supabase (client, server), web/lib/authDisplay; web/.env.example documenta variables y callback en Supabase"
+      ]
+    },
+    {
+      "version": "1.9.0",
+      "date": "2026-04-21",
+      "releasedAt": "2026-04-21T12:00:00Z",
+      "changes": [
         "Rendimiento — panel (/panel): Suspense y PanelPageSkeleton mientras responde la API",
         "Rendimiento — (dashboard)/loading.tsx: feedback al navegar entre rutas del dashboard",
         "Rendimiento — next.config: se retira redirect fijo de /; la raíz y sesión las resuelve el middleware o app/page",
