@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { IconBriefcase, IconFolder, IconPanel } from "@/components/icons/NavIcons";
 import { DeploymentChangelogModal } from "@/components/layout/DeploymentChangelogModal";
+import { SidebarUserBlock } from "@/components/layout/SidebarUserBlock";
 import { getCurrentVersion } from "@/lib/deploymentChangelog";
 
 const nav = [
@@ -101,21 +102,7 @@ export function Sidebar({
       <div
         className={`mt-auto shrink-0 space-y-3 border-t border-slate-100 p-3 pb-4 ${collapsed ? "px-2" : ""}`}
       >
-        <div
-          className={`flex items-center gap-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100 ${
-            collapsed ? "justify-center p-2" : ""
-          }`}
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-sm font-bold text-white ring-2 ring-sky-100">
-            E
-          </div>
-          {!collapsed ? (
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-slate-900">Edgar</p>
-              <p className="truncate text-xs text-slate-500">Líder del Equipo ITAI</p>
-            </div>
-          ) : null}
-        </div>
+        <SidebarUserBlock collapsed={collapsed} />
         <div className={collapsed ? "flex justify-center" : ""}>
           <button
             type="button"

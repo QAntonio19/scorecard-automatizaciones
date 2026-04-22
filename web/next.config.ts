@@ -10,8 +10,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      /** Evita un round-trip extra por redirect() en app/page.tsx. */
-      { source: "/", destination: "/panel", permanent: false },
+      /** La ruta `/` se resuelve en `middleware` (sesión) o en `app/page.tsx` (sin Supabase). */
       { source: "/automatizaciones", destination: "/workflows", permanent: false },
       { source: "/automatizaciones/:id", destination: "/workflows/:id", permanent: false },
     ];
