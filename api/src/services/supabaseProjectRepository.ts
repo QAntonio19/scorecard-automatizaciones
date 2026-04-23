@@ -107,11 +107,50 @@ function mapWorkflowToProject(
   };
 }
 
+/** Columnas usadas en listas y detalle (evita `*`: no arrastra columnas extra en la fila de Supabase). */
+const WORKFLOWS_SELECT_LIST =
+  "id, nombre, descripcion, valor, responsable_id, estatus, legacy_id, categoria, fase, complejidad, pasos, cronograma, progreso, tasa_fallo, nota_riesgo, etiqueta_salud, owner_override_id, fase_override";
+
+/**
+ * Fila mínima para el panel: sin descripción, pasos, cronograma ni notas; menos datos por red hacia el API.
+ * Los huecos se rellenan con nulos y mapWorkflowToProject aplica el mismo criterio de salud/fase/plataforma.
+ */
+const WORKFLOWS_SELECT_PANEL_SUMMARY =
+  "id, nombre, legacy_id, categoria, estatus, etiqueta_salud, tasa_fallo, fase, fase_override, complejidad, valor, responsable_id, owner_override_id";
+
+const PANEL_SUMMARY_DEFAULTS: Partial<WorkflowRow> = {
+  descripcion: null,
+  pasos: null,
+  cronograma: null,
+  progreso: null,
+  nota_riesgo: null,
+};
+
 export async function fetchProjectsFromSupabase(): Promise<ProjectRecord[]> {
+  return loadWorkflowsForProjectsFromSupabase({
+    select: WORKFLOWS_SELECT_LIST,
+    rowDefaults: null,
+  });
+}
+
+/** Sólo para `GET /api/projects/summary`: menos carga I/O y payload que leer toda la fila. */
+export async function fetchProjectRecordsForPortfolioSummaryFromSupabase(): Promise<ProjectRecord[]> {
+  return loadWorkflowsForProjectsFromSupabase({
+    select: WORKFLOWS_SELECT_PANEL_SUMMARY,
+    rowDefaults: PANEL_SUMMARY_DEFAULTS,
+  });
+}
+
+type LoadSupabaseOptions = { select: string; rowDefaults: Partial<WorkflowRow> | null };
+
+async function loadWorkflowsForProjectsFromSupabase({
+  select,
+  rowDefaults,
+}: LoadSupabaseOptions): Promise<ProjectRecord[]> {
   const sb = getSupabaseServerClient();
-  const { data: workflows, error: wErr } = await sb.from("workflows").select("*");
+  const { data: workflows, error: wErr } = await sb.from("workflows").select(select);
   if (wErr) throw new Error(`Supabase workflows: ${wErr.message}`);
-  const rows = (workflows ?? []) as WorkflowRow[];
+  const rows = (workflows ?? []) as Partial<WorkflowRow>[];
   if (rows.length === 0) return [];
 
   const wfIds = rows.map((r) => r.id);
@@ -162,7 +201,10 @@ export async function fetchProjectsFromSupabase(): Promise<ProjectRecord[]> {
     techsByWorkflow.set(link.workflow_id, cur);
   }
 
-  return rows.map((w) => mapWorkflowToProject(w, responsables, platsByWorkflow, techsByWorkflow));
+  return rows.map((raw) => {
+    const w = (rowDefaults ? { ...rowDefaults, ...raw } : raw) as WorkflowRow;
+    return mapWorkflowToProject(w, responsables, platsByWorkflow, techsByWorkflow);
+  });
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

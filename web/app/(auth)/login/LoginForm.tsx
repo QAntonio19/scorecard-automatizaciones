@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
+import { safeParseLoginCredentials } from "@/lib/authLoginInput";
 import { createBrowserSupabaseClient, isSupabaseAuthConfigured } from "@/lib/supabase/client";
 
 const DEFAULT_NEXT = "/panel";
@@ -36,12 +37,17 @@ export function LoginForm() {
         setError("Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.");
         return;
       }
+      const parsed = safeParseLoginCredentials(email, password);
+      if (!parsed.ok) {
+        setError(parsed.errorMessage);
+        return;
+      }
       setSubmitting(true);
       try {
         const supabase = createBrowserSupabaseClient();
         const { data, error: signError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
+          email: parsed.data.email,
+          password: parsed.data.password,
         });
         if (signError) {
           setError(signError.message);
@@ -102,6 +108,7 @@ export function LoginForm() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            maxLength={256}
             required
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 ring-sky-200 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
           />
@@ -117,6 +124,7 @@ export function LoginForm() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            maxLength={4096}
             required
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 ring-sky-200 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
           />

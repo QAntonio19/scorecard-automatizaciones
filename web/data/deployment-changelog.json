@@ -6,6 +6,19 @@
   },
   "releases": [
     {
+      "version": "1.11.0",
+      "date": "2026-04-22",
+      "releasedAt": "2026-04-22T12:00:00Z",
+      "changes": [
+        "Rendimiento (API) — panel: `GET /api/projects/summary` en modo Supabase carga `workflows` con columnas mínimas (omite descripción, notas y campos de texto no usados en el agregado); misma lógica de matriz, atención y conteos, menos I/O hacia la base",
+        "Rendimiento (API) — listado: consulta a `workflows` con `select` explícito de columnas usadas (evita `*`) y comparte joins con plataformas, tecnologías y responsables",
+        "Código (API) — resumen de portafolio: `buildPortfolioSummaryFromProjectRecords` reutilizable para Supabase mínimo y datos JSON/merge",
+        "Seguridad — login: validación con Zod (`web/lib/authLoginInput`) antes de `signInWithPassword` — email con formato estricto y límite de longitud, contraseña acotada, rechazo de bytes nulos y saltos de línea; `maxLength` en campos del formulario",
+        "Seguridad — login: el inicio de sesión sigue siendo vía API de Supabase Auth (no hay consultas SQL en la app; la validación añade defensa en profundidad y evita abusos de payload)",
+        "Dependencia — `zod` en el paquete `web` para el esquema de credenciales"
+      ]
+    },
+    {
       "version": "1.10.0",
       "date": "2026-04-21",
       "releasedAt": "2026-04-21T16:00:00Z",

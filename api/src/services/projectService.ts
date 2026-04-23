@@ -13,6 +13,7 @@ import {
   writePhaseOverrides,
 } from "../projectStore.js";
 import {
+  fetchProjectRecordsForPortfolioSummaryFromSupabase,
   supabaseClearOwnerOverride,
   supabaseClearPhaseOverride,
   supabasePatchWorkflowDetails,
@@ -180,8 +181,19 @@ export async function patchProjectDetails(
   return getProjectById(id);
 }
 
+/**
+ * `GET /api/projects/summary`: con Supabase evita `select *` y columnas de texto largo; JSON/modo merge usa `readProjects()` como antes.
+ */
 export async function getPortfolioSummary(): Promise<PortfolioSummaryResponse> {
+  if (getProjectsDataMode() === "supabase") {
+    const all = await fetchProjectRecordsForPortfolioSummaryFromSupabase();
+    return buildPortfolioSummaryFromProjectRecords(all);
+  }
   const all = await readProjects();
+  return buildPortfolioSummaryFromProjectRecords(all);
+}
+
+function buildPortfolioSummaryFromProjectRecords(all: ProjectRecord[]): PortfolioSummaryResponse {
   const activos = all.filter((p) => p.health === "activo").length;
   const pausados = all.filter((p) => p.health === "pausado").length;
   const enRiesgo = all.filter((p) => p.health === "en_riesgo").length;
