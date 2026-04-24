@@ -6,6 +6,7 @@ import { HealthDot } from "@/components/proyectos/HealthDot";
 import { ProjectDetailsForm } from "@/components/proyectos/ProjectDetailsForm";
 import { ProjectPhasePicker } from "@/components/proyectos/ProjectPhasePicker";
 import { ProjectOwnerPicker } from "@/components/proyectos/ProjectOwnerPicker";
+import { useCanEdit } from "@/hooks/useCanEdit";
 import { phaseLabel } from "@/lib/phaseLabels";
 import type { OwnerCode, ProjectPhase, ProjectRecord } from "@/lib/projectTypes";
 
@@ -25,6 +26,7 @@ const roBox = "rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm rin
 type Props = { project: ProjectRecord };
 
 export function WorkflowDetailShell({ project: initial }: Props) {
+  const canEdit = useCanEdit();
   const [project, setProject] = useState<ProjectRecord>(initial);
   const [editOpen, setEditOpen] = useState(false);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
@@ -77,13 +79,19 @@ export function WorkflowDetailShell({ project: initial }: Props) {
             </span>
             Volver a workflows
           </Link>
-          <button
-            type="button"
-            onClick={() => setEditOpen(true)}
-            className="inline-flex shrink-0 items-center justify-center rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-500/30"
-          >
-            Editar
-          </button>
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-500/30"
+            >
+              Editar
+            </button>
+          ) : (
+            <span className="inline-flex shrink-0 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-400">
+              Solo lectura
+            </span>
+          )}
         </div>
 
         <header className="relative mt-6 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/80 to-sky-50/40 px-6 py-8 shadow-sm sm:px-8 sm:py-10">
@@ -100,8 +108,9 @@ export function WorkflowDetailShell({ project: initial }: Props) {
               </h1>
               <p className="max-w-2xl text-pretty text-base leading-relaxed text-slate-600">{project.description}</p>
               <p className="text-xs text-slate-500">
-                Vista de solo lectura. Pulsa <strong className="font-semibold text-slate-700">Editar</strong> para
-                cambiar fase, responsable y el resto de campos.
+                {canEdit
+                  ? <>Vista de solo lectura. Pulsa <strong className="font-semibold text-slate-700">Editar</strong> para cambiar fase, responsable y el resto de campos.</>
+                  : "Vista de solo lectura. No tienes permisos de edición en este entorno."}
               </p>
             </div>
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useCanEdit } from "@/hooks/useCanEdit";
 import { appendUserProject } from "@/lib/itProjectsLocalStore";
 import { IT_PROJECT_PHASE_ORDER, phaseLabel } from "@/lib/itProjectPortfolio";
 import type { ItProject, ItProjectPhase, ItProjectRisk } from "@/lib/itProjectTypes";
@@ -25,6 +26,7 @@ function parseWorkflowIdsFromInput(raw: string): string[] {
 type FormError = Partial<Record<"code" | "name" | "dates", string>>;
 
 export function CreateItProjectForm() {
+  const canEdit = useCanEdit();
   const router = useRouter();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -55,6 +57,10 @@ export function CreateItProjectForm() {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
+    if (!canEdit) {
+      setSubmitError("No tienes permisos para crear proyectos.");
+      return;
+    }
     if (!validate()) return;
 
     setPending(true);
@@ -258,8 +264,9 @@ export function CreateItProjectForm() {
         </Link>
         <button
           type="submit"
-          disabled={pending}
-          className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:opacity-60"
+          disabled={pending || !canEdit}
+          title={!canEdit ? "No tienes permisos de edición" : undefined}
+          className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {pending ? "Guardando…" : "Crear proyecto"}
         </button>

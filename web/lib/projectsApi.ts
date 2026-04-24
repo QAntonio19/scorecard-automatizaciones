@@ -129,7 +129,14 @@ function normalizePortfolioSummary(raw: unknown): PortfolioSummaryResponse {
 export async function fetchPortfolioSummary(): Promise<PortfolioSummaryResponse> {
   assertServerApiConfigured();
   const url = `${getApiBaseUrl()}/api/projects/summary`;
-  const res = await fetch(url, { cache: "no-store" });
+  /**
+   * Revalidación incremental: Next.js sirve la respuesta cacheada y revalida
+   * en segundo plano cada 30 s. La primera carga sigue siendo fresca;
+   * las siguientes dentro de la ventana son instantáneas (sin round-trip al API).
+   * Si se necesita invalidar manualmente (tras un PATCH), llamar a
+   * `revalidatePath("/panel")` desde un Server Action.
+   */
+  const res = await fetch(url, { next: { revalidate: 30 } });
   if (!res.ok) throw new Error(`No se pudo cargar el scorecard (${res.status})`);
   let parsed: unknown;
   try {

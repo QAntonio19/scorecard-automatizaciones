@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useCanEdit } from "@/hooks/useCanEdit";
 import {
   clearProjectWorkflowLinksOverride,
   readWorkflowLinkOverrides,
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function ItProjectWorkflowLinksPanel({ project }: Props) {
+  const canEdit = useCanEdit() ?? false;
   const [catalog, setCatalog] = useState<ProjectRecord[]>([]);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -135,20 +137,22 @@ export function ItProjectWorkflowLinksPanel({ project }: Props) {
                 >
                   Abrir
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => remove(wid)}
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-900"
-                >
-                  Quitar
-                </button>
+                {canEdit ? (
+                  <button
+                    type="button"
+                    onClick={() => remove(wid)}
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-900"
+                  >
+                    Quitar
+                  </button>
+                ) : null}
               </div>
             </li>
           ))
         )}
       </ul>
 
-      <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+      {canEdit ? <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
         <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Añadir desde el scorecard</p>
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-[min(100%,16rem)] flex-1">
@@ -214,7 +218,7 @@ export function ItProjectWorkflowLinksPanel({ project }: Props) {
             Restaurar vínculos por defecto del registro
           </button>
         ) : null}
-      </div>
+      </div> : null}
     </section>
   );
 }

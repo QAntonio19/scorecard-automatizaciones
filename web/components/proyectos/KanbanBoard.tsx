@@ -16,6 +16,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useState } from "react";
+import { useCanEdit } from "@/hooks/useCanEdit";
 import { phaseLabel, workflowPhaseTopBorderClass } from "@/lib/phaseLabels";
 import { getApiBaseUrl } from "@/lib/projectsApi";
 import type { ProjectPhase, ProjectRecord } from "@/lib/projectTypes";
@@ -50,9 +51,10 @@ async function patchProjectPhase(projectId: string, phase: ProjectPhase): Promis
   }
 }
 
-function DraggableKanbanCard({ project }: { project: ProjectRecord }) {
+function DraggableKanbanCard({ project, canEdit }: { project: ProjectRecord; canEdit: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
+    disabled: !canEdit,
   });
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -64,9 +66,9 @@ function DraggableKanbanCard({ project }: { project: ProjectRecord }) {
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-xl touch-none"
-      {...listeners}
-      {...attributes}
+      className={`rounded-xl ${canEdit ? "touch-none" : ""}`}
+      {...(canEdit ? listeners : {})}
+      {...(canEdit ? attributes : {})}
     >
       <ProjectKanbanCard project={project} />
     </div>
@@ -76,9 +78,11 @@ function DraggableKanbanCard({ project }: { project: ProjectRecord }) {
 function KanbanColumn({
   col,
   projects,
+  canEdit,
 }: {
   col: ProjectPhase;
   projects: ProjectRecord[];
+  canEdit: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: col });
   const colProjects = projects.filter((p) => p.phase === col);
@@ -108,7 +112,7 @@ function KanbanColumn({
         }`}
       >
         {colProjects.map((p) => (
-          <DraggableKanbanCard key={p.id} project={p} />
+          <DraggableKanbanCard key={p.id} project={p} canEdit={canEdit} />
         ))}
         {colProjects.length === 0 ? (
           <p className="flex flex-1 items-center justify-center px-1 py-8 text-center text-xs text-slate-400">
@@ -123,6 +127,7 @@ function KanbanColumn({
 type Props = { projects: ProjectRecord[] };
 
 export function KanbanBoard({ projects: initialProjects }: Props) {
+  const canEdit = useCanEdit() ?? false;
   const router = useRouter();
   const dndTitleId = useId();
   const [projects, setProjects] = useState<ProjectRecord[]>(initialProjects);
@@ -202,7 +207,7 @@ export function KanbanBoard({ projects: initialProjects }: Props) {
       >
         <div className="grid min-h-0 grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {phases.map((col) => (
-            <KanbanColumn key={col} col={col} projects={projects} />
+            <KanbanColumn key={col} col={col} projects={projects} canEdit={canEdit} />
           ))}
         </div>
         <DragOverlay dropAnimation={null}>

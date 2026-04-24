@@ -6,6 +6,25 @@
   },
   "releases": [
     {
+      "version": "1.12.0",
+      "date": "2026-04-23",
+      "releasedAt": "2026-04-23T18:00:00Z",
+      "changes": [
+        "Permisos — acceso de escritura restringido a usuarios itai, evazquez y gclglobal (por prefijo de email); los demás usuarios tienen solo lectura",
+        "Permisos — `web/lib/permissions.ts`: lista `EDITOR_PREFIXES` centralizada; `canEditByEmail()` para comparación insensible a mayúsculas",
+        "Permisos — `web/hooks/useCanEdit`: hook reutilizable que resuelve la sesión de Supabase en tiempo real; sin Supabase configurado devuelve `true` (modo dev)",
+        "Permisos — Proyectos: botón «Nuevo proyecto» oculto para no-editores",
+        "Permisos — Proyectos: formulario «Crear proyecto» con botón deshabilitado y bloqueo en onSubmit",
+        "Permisos — Workflows: botón «Editar» reemplazado por badge «Solo lectura» para no-editores; texto de ficha adaptado",
+        "Permisos — Kanban: DnD desactivado para no-editores (tarjetas no se pueden arrastrar)",
+        "Permisos — Responsable y Fase: selects y botón «Quitar manual» deshabilitados para no-editores",
+        "Permisos — Vínculos de workflow: panel «Añadir» y botón «Quitar» ocultos para no-editores",
+        "Rendimiento (front) — `fetchPortfolioSummary`: cambiado de `cache: no-store` a `next: { revalidate: 30 }` (ISR); el panel carga instantáneamente desde caché entre revalidaciones",
+        "Rendimiento (API) — caché en memoria de 30 s para `GET /api/projects/summary`; se invalida automáticamente tras PATCH de fase, responsable o detalles",
+        "Rendimiento — ruta `GET /api/warmup` en Next.js que hace ping a `GET /health` del API Express; el layout del dashboard lo llama al montar para despertar el API antes de llegar al panel"
+      ]
+    },
+    {
       "version": "1.11.0",
       "date": "2026-04-22",
       "releasedAt": "2026-04-22T12:00:00Z",

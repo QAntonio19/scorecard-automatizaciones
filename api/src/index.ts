@@ -82,13 +82,35 @@ app.get("/api/automations/:id", (req, res, next) => {
   }
 });
 
+/**
+ * Caché en memoria para el resumen del portafolio.
+ * Evita consultas repetidas a Supabase cuando Next.js revalida o varios usuarios
+ * cargan el panel en el mismo período.
+ */
+let summaryCache: { data: Awaited<ReturnType<typeof getPortfolioSummary>>; expiresAt: number } | null = null;
+const SUMMARY_TTL_MS = 30_000;
+
 app.get("/api/projects/summary", async (_req, res, next) => {
   try {
-    res.json(await getPortfolioSummary());
+    const now = Date.now();
+    if (summaryCache && now < summaryCache.expiresAt) {
+      res.setHeader("X-Cache", "HIT");
+      res.json(summaryCache.data);
+      return;
+    }
+    const data = await getPortfolioSummary();
+    summaryCache = { data, expiresAt: now + SUMMARY_TTL_MS };
+    res.setHeader("X-Cache", "MISS");
+    res.json(data);
   } catch (err) {
     next(err);
   }
 });
+
+/** Invalida el caché en memoria del resumen (llamada interna tras mutaciones). */
+export function invalidateSummaryCache(): void {
+  summaryCache = null;
+}
 
 app.get("/api/projects", async (req, res, next) => {
   try {
@@ -154,6 +176,7 @@ app.patch("/api/projects/:id/owner", async (req, res, next) => {
   try {
     const body = patchProjectOwnerBodySchema.parse(req.body);
     const result = await setProjectOwner(req.params.id, body.ownerCode);
+    invalidateSummaryCache();
     res.json(result);
   } catch (err) {
     next(err);
@@ -163,6 +186,7 @@ app.patch("/api/projects/:id/owner", async (req, res, next) => {
 app.delete("/api/projects/:id/owner", async (req, res, next) => {
   try {
     const result = await clearProjectOwnerOverride(req.params.id);
+    invalidateSummaryCache();
     res.json(result);
   } catch (err) {
     next(err);
@@ -173,6 +197,7 @@ app.patch("/api/projects/:id/phase", async (req, res, next) => {
   try {
     const body = patchProjectPhaseBodySchema.parse(req.body);
     const result = await setProjectPhase(req.params.id, body.phase);
+    invalidateSummaryCache();
     res.json(result);
   } catch (err) {
     next(err);
@@ -182,6 +207,7 @@ app.patch("/api/projects/:id/phase", async (req, res, next) => {
 app.delete("/api/projects/:id/phase", async (req, res, next) => {
   try {
     const result = await clearProjectPhaseOverride(req.params.id);
+    invalidateSummaryCache();
     res.json(result);
   } catch (err) {
     next(err);
@@ -192,6 +218,7 @@ app.patch("/api/projects/:id", async (req, res, next) => {
   try {
     const body = patchProjectDetailsBodySchema.parse(req.body);
     const result = await patchProjectDetails(req.params.id, body);
+    invalidateSummaryCache();
     res.json(result);
   } catch (err) {
     next(err);

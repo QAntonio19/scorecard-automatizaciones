@@ -1,8 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-const AUTH_DISABLED =
-  !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+const hasSupabaseEnv =
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) &&
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
+
+/**
+ * Sólo en desarrollo: sin Supabase, el panel sigue abriendo (flujo local).
+ * En producción sin `NEXT_PUBLIC_*` inyectados en el build, antes se dejaba pasar
+ * todo (Invitado, sin login). Ahí forzamos `/login?error=config`.
+ */
+const isProduction = process.env.NODE_ENV === "production";
 
 function isProtectedPath(pathname: string): boolean {
   if (pathname.startsWith("/panel")) return true;
@@ -33,7 +41,14 @@ function redirectWithAuthCookies(
 }
 
 export async function middleware(request: NextRequest) {
-  if (AUTH_DISABLED) {
+  if (!hasSupabaseEnv) {
+    if (isProduction) {
+      const { pathname } = request.nextUrl;
+      if (pathname === "/login" || pathname.startsWith("/auth/")) {
+        return NextResponse.next();
+      }
+      return NextResponse.redirect(new URL("/login?error=config", request.url));
+    }
     return NextResponse.next();
   }
 

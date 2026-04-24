@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
+import { useCanEdit } from "@/hooks/useCanEdit";
 import { ItProjectsFilters } from "@/components/it-projects/ItProjectsFilters";
 import { ItProjectsKanbanBoard } from "@/components/it-projects/ItProjectsKanbanBoard";
 import { ItProjectsTable } from "@/components/it-projects/ItProjectsTable";
@@ -36,6 +37,7 @@ function PortfolioSkeleton() {
 }
 
 export function ProyectosPortfolioContent() {
+  const canEdit = useCanEdit();
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
   const fase = parsePhase(searchParams.get("fase"));
@@ -59,12 +61,14 @@ export function ProyectosPortfolioContent() {
             Portafolio de iniciativas IT — alcance, hitos, riesgos y vínculos con el scorecard de flujos.
           </p>
         </div>
-        <Link
-          href="/proyectos/nuevo"
-          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-sky-800"
-        >
-          Nuevo proyecto
-        </Link>
+        {canEdit ? (
+          <Link
+            href="/proyectos/nuevo"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-sky-800"
+          >
+            Nuevo proyecto
+          </Link>
+        ) : null}
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useCanEdit } from "@/hooks/useCanEdit";
 import { getApiBaseUrl } from "@/lib/projectsApi";
 import type { OwnerCode } from "@/lib/projectTypes";
 
@@ -23,6 +24,7 @@ async function errorMessageFromResponse(res: Response): Promise<string> {
 }
 
 export function ProjectOwnerPicker({ projectId, ownerCode, ownerIsManual }: Props) {
+  const canEdit = useCanEdit() ?? false;
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export function ProjectOwnerPicker({ projectId, ownerCode, ownerIsManual }: Prop
         <select
           id={`owner-${projectId}`}
           value={ownerCode}
-          disabled={pending}
+          disabled={pending || !canEdit}
           onChange={(e) => void patchOwner(e.target.value as OwnerCode)}
           className="min-w-[13rem] flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 shadow-sm transition hover:border-slate-300 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-500/15 disabled:opacity-60"
         >
@@ -81,7 +83,7 @@ export function ProjectOwnerPicker({ projectId, ownerCode, ownerIsManual }: Prop
         </select>
         <button
           type="button"
-          disabled={pending || !ownerIsManual}
+          disabled={pending || !ownerIsManual || !canEdit}
           onClick={() => void clearOverride()}
           title={
             ownerIsManual

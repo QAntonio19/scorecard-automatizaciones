@@ -18,6 +18,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return () => mq.removeEventListener("change", apply);
   }, []);
 
+  /** Despierta el API Express en cuanto el layout monta (evita cold-start al cargar el panel). */
+  useEffect(() => {
+    void fetch("/api/warmup", { method: "GET", cache: "no-store" }).catch(() => {});
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       {mobileOpen ? (
