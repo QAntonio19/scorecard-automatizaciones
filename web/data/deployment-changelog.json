@@ -6,6 +6,26 @@
   },
   "releases": [
     {
+      "version": "1.13.0",
+      "date": "2026-04-24",
+      "releasedAt": "2026-04-24T20:00:00Z",
+      "changes": [
+        "Sync n8n — soporte para workflows archivados: se lee el campo `isArchived` de la API de n8n (disponible desde n8n 1.x); archivados se separan de pausados",
+        "Sync n8n — workflows archivados se mapean a fase `archivado`, progreso 0 y schedule 'Archivado en n8n'; ya no aparecen como 'Pausado / Por iniciar'",
+        "Sync n8n — `mapN8nWorkflow` distingue tres estados: Archivado, Pausado y Activo; `inferPhase` e `inferProgress` reciben parámetro `archived`",
+        "Sync n8n — se guarda el campo `updatedAt` (última modificación en n8n) en cada `ProjectRecord` para usos futuros como la regla de eliminación",
+        "Sync automático — activado en `api/.env` con `EXTERNAL_SYNC_ENABLED=true`; sincroniza al arrancar y cada 5 minutos (`EXTERNAL_SYNC_INTERVAL_MS=300000`) sin acción manual",
+        "Sync automático — eliminado filtro `N8N_PROJECT_ID` erróneo que bloqueaba todos los workflows (el UUID era el del usuario, no un proyecto); ahora se importan los 51 workflows de la instancia",
+        "Proyectos IT — nuevo campo `urgencyLevel` (Baja / Media / Alta) en `ItProject`; select en el formulario de creación y badge de color en la ficha y cards",
+        "Proyectos IT — formulario de creación: reemplazado el textarea de IDs por un selector del catálogo de workflows (carga en vivo desde el API) con lista de seleccionados, botón Quitar y opción 'Añadir por ID' como fallback",
+        "Proyectos IT — formulario de creación: el selector de workflows filtra los ya añadidos y los ordena alfabéticamente; acepta Enter en el campo de ID manual",
+        "Workflows archivados — botón 'Eliminar' disponible en la ficha del workflow para editores cuando el workflow lleva más de 90 días archivado sin modificaciones",
+        "Workflows archivados — confirmación antes de eliminar con aviso de que la acción es irreversible; redirige a /workflows tras confirmar",
+        "API — nuevo endpoint `DELETE /api/projects/:id`: elimina el workflow de `projects.json` y/o `external-projects.json` y limpia sus overrides de fase, responsable y detalles; en modo Supabase elimina la fila de la tabla `workflows`",
+        "API — `invalidateSummaryCache()` se llama tras cada DELETE para que el panel refleje el cambio en la siguiente carga"
+      ]
+    },
+    {
       "version": "1.12.0",
       "date": "2026-04-23",
       "releasedAt": "2026-04-23T18:00:00Z",

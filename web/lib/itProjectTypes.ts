@@ -7,6 +7,8 @@ export type ItProjectPhase =
 
 export type ItProjectRisk = "bajo" | "medio" | "alto";
 
+export type ItProjectUrgency = "baja" | "media" | "alta";
+
 export interface ItProjectMilestone {
   id: string;
   title: string;
@@ -25,6 +27,7 @@ export interface ItProject {
   startDate: string;
   targetEndDate: string;
   riskLevel: ItProjectRisk;
+  urgencyLevel?: ItProjectUrgency;
   /** IDs de filas en el scorecard de Workflows (`/workflows/[id]`). */
   linkedWorkflowIds: string[];
   milestones: ItProjectMilestone[];

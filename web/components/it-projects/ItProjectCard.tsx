@@ -4,6 +4,8 @@ import {
   itPhaseTopBorderClass,
   phaseLabel,
   riskLabel,
+  urgencyLabel,
+  urgencyBadgeClass,
 } from "@/lib/itProjectPortfolio";
 
 function ItRiskDot({ risk }: { risk: ItProjectRisk }) {
@@ -81,6 +83,11 @@ export function ItProjectCard({ project: p, phaseBorderOnCard }: Props) {
         ) : (
           <span className="text-[11px] text-slate-600">{riskLabel(p.riskLevel)}</span>
         )}
+        {p.urgencyLevel ? (
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset ${urgencyBadgeClass(p.urgencyLevel)}`}>
+            {urgencyLabel(p.urgencyLevel)}
+          </span>
+        ) : null}
         <span className="text-slate-300">·</span>
         <span className="truncate text-[11px] text-slate-600">{p.sponsor}</span>
         <span className="text-slate-300">·</span>

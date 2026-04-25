@@ -32,7 +32,11 @@ interface N8nWorkflow {
   id: string | number;
   name: string;
   active?: boolean;
+  /** n8n >= 1.x: true cuando el workflow está archivado (ya no se activa ni ejecuta). */
+  isArchived?: boolean;
   tags?: Array<{ name?: string } | string>;
+  /** ISO-8601: última modificación del workflow en n8n. */
+  updatedAt?: string;
 }
 
 interface MakeScenario {
@@ -87,13 +91,18 @@ function inferHealthLabel(health: ProjectHealth): string {
   return "En riesgo";
 }
 
-/** Sync sin “aprobación” de negocio: pausado → aún no en marcha; activo/riesgo → en curso. */
-function inferPhase(health: ProjectHealth): ProjectPhase {
+/**
+ * Sync sin "aprobacion" de negocio: pausado -> aun no en marcha; activo/riesgo -> en curso.
+ * `archived` tiene precedencia: workflow retirado permanentemente en n8n.
+ */
+function inferPhase(health: ProjectHealth, archived = false): ProjectPhase {
+  if (archived) return "archivado";
   if (health === "pausado") return "por_iniciar";
   return "en_proceso";
 }
 
-function inferProgress(health: ProjectHealth): number {
+function inferProgress(health: ProjectHealth, archived = false): number {
+  if (archived) return 0;
   if (health === "activo") return 70;
   if (health === "pausado") return 15;
   return 45;
@@ -108,29 +117,31 @@ function tagsToTechnologies(rawTags: Array<{ name?: string } | string> | undefin
 }
 
 function mapN8nWorkflow(workflow: N8nWorkflow): ProjectRecord {
-  const active = Boolean(workflow.active);
+  const archived = Boolean(workflow.isArchived);
+  const active = !archived && Boolean(workflow.active);
   const health = inferHealth(active, false);
   const technologies = ["n8n", ...tagsToTechnologies(workflow.tags)];
   const owner = externalSyncDefaultOwner();
   return {
     id: normalizeId("n8n", workflow.id),
     name: workflow.name,
-    description: "Sincronizado automáticamente desde n8n.",
-    phase: inferPhase(health),
+    description: "Sincronizado automaticamente desde n8n.",
+    phase: inferPhase(health, archived),
     health,
     healthLabel: inferHealthLabel(health),
     ownerCode: owner.ownerCode,
     ownerName: owner.ownerName,
-    category: "Automatización n8n",
+    category: "Automatizacion n8n",
     platform: "n8n",
     steps: 0,
-    schedule: active ? "Activo en n8n" : "Pausado en n8n",
-    progress: inferProgress(health),
+    schedule: archived ? "Archivado en n8n" : active ? "Activo en n8n" : "Pausado en n8n",
+    progress: inferProgress(health, archived),
     technologies,
     failureRate: null,
-    riskNote: null,
+    riskNote: archived ? "Workflow archivado en n8n." : null,
     complexity: 5,
     businessValue: 6,
+    updatedAt: workflow.updatedAt,
   };
 }
 
@@ -147,13 +158,13 @@ function mapMakeScenario(scenario: MakeScenario): ProjectRecord {
   return {
     id: normalizeId("make", scenario.id),
     name: scenario.name,
-    description: "Sincronizado automáticamente desde Make.",
+    description: "Sincronizado automaticamente desde Make.",
     phase: inferPhase(health),
     health,
     healthLabel: inferHealthLabel(health),
     ownerCode: owner.ownerCode,
     ownerName: owner.ownerName,
-    category: "Automatización Make",
+    category: "Automatizacion Make",
     platform: "Make",
     steps: 0,
     schedule: active ? "Activo en Make" : "Pausado en Make",
@@ -168,7 +179,7 @@ function mapMakeScenario(scenario: MakeScenario): ProjectRecord {
 
 /**
  * Misma estrategia que `scripts/diagnose-n8n.mjs`: `fetch` nativo con `redirect: follow`.
- * Evita diferencias con el diagnóstico (User-Agent propio, redirect manual) que en algunos
+ * Evita diferencias con el diagnostico (User-Agent propio, redirect manual) que en algunos
  * entornos acababan en 401 frente a la misma clave.
  */
 async function fetchJson(url: string, headers: Record<string, string>): Promise<unknown> {
@@ -176,7 +187,7 @@ async function fetchJson(url: string, headers: Record<string, string>): Promise<
   const finalUrl = res.url;
   if (!res.ok) {
     const hint = await res.text();
-    const short = hint.length > 200 ? `${hint.slice(0, 200)}…` : hint;
+    const short = hint.length > 200 ? `${hint.slice(0, 200)}...` : hint;
     throw new Error(
       `HTTP ${res.status} al consultar ${finalUrl}${short ? ` — ${short}` : ""}`,
     );
@@ -184,7 +195,7 @@ async function fetchJson(url: string, headers: Record<string, string>): Promise<
   return (await res.json()) as unknown;
 }
 
-/** Quita espacios, BOM y comillas típicas de .env mal copiado. */
+/** Quita espacios, BOM y comillas tipicas de .env mal copiado. */
 export function normalizeSecret(raw: string): string {
   let s = raw.trim();
   if (s.charCodeAt(0) === 0xfeff) {
@@ -234,7 +245,7 @@ async function n8nFetchAuthed(url: string, apiKey: string): Promise<unknown> {
 /**
  * Make API v2: cabecera documentada `Authorization: Token <token>`.
  * MAKE_AUTH_MODE=token | bearer — por defecto `token` (no reintentamos Bearer: el fallback
- * confundía el mensaje con «Invalid bearer token» cuando el problema era el token en sí).
+ * confundia el mensaje con "Invalid bearer token" cuando el problema era el token en si).
  */
 async function makeFetchAuthed(url: string, token: string): Promise<unknown> {
   const mode = process.env.MAKE_AUTH_MODE?.trim().toLowerCase();
@@ -302,7 +313,7 @@ async function resolveMakeOrganizationId(
   if (explicit) {
     const n = Number(explicit);
     if (!Number.isFinite(n)) {
-      throw new Error("MAKE_ORGANIZATION_ID no es un número válido.");
+      throw new Error("MAKE_ORGANIZATION_ID no es un numero valido.");
     }
     return n;
   }
@@ -393,7 +404,7 @@ export async function syncExternalProjects(): Promise<ExternalSyncRunStatus> {
       } catch (error) {
         const message = error instanceof Error ? error.message : "Error desconocido en n8n";
         const hint401 = message.includes("HTTP 401")
-          ? " Revisa N8N_API_KEY (Settings → n8n API, clave completa al crearla)."
+          ? " Revisa N8N_API_KEY (Settings -> n8n API, clave completa al crearla)."
           : "";
         errors.push(`n8n: ${message}${hint401}`);
       }
@@ -409,7 +420,7 @@ export async function syncExternalProjects(): Promise<ExternalSyncRunStatus> {
       warnings.push("Make omitido: falta MAKE_API_TOKEN");
     } else if (/^replace_with_make_token$/i.test(makeToken.trim())) {
       warnings.push(
-        "Make omitido: MAKE_API_TOKEN sigue siendo el placeholder; en Make → perfil → API crea un token y pégalo en api/.env.",
+        "Make omitido: MAKE_API_TOKEN sigue siendo el placeholder; en Make -> perfil -> API crea un token y pegalo en api/.env.",
       );
     } else {
       try {
@@ -417,7 +428,7 @@ export async function syncExternalProjects(): Promise<ExternalSyncRunStatus> {
       } catch (error) {
         const message = error instanceof Error ? error.message : "Error desconocido en Make";
         const hint401 = message.includes("HTTP 401")
-          ? " Revisa MAKE_API_TOKEN, MAKE_API_BASE_URL (región eu1/eu2/…) y MAKE_ORGANIZATION_ID."
+          ? " Revisa MAKE_API_TOKEN, MAKE_API_BASE_URL (region eu1/eu2/...) y MAKE_ORGANIZATION_ID."
           : "";
         errors.push(`Make: ${message}${hint401}`);
       }

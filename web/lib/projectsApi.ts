@@ -155,3 +155,13 @@ export async function fetchProjectById(id: string): Promise<ProjectRecord | null
   if (!res.ok) throw new Error(`No se pudo cargar el workflow (${res.status})`);
   return (await res.json()) as ProjectRecord;
 }
+
+/** Elimina un workflow archivado. Solo disponible para editores con permiso. */
+export async function deleteWorkflow(id: string): Promise<void> {
+  const url = `${getApiBaseUrl()}/api/projects/${encodeURIComponent(id)}`;
+  const res = await fetch(url, { method: "DELETE", cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`No se pudo eliminar el workflow (${res.status})${body ? `: ${body}` : ""}`);
+  }
+}

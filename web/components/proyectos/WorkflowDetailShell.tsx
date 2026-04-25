@@ -2,13 +2,23 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { HealthDot } from "@/components/proyectos/HealthDot";
 import { ProjectDetailsForm } from "@/components/proyectos/ProjectDetailsForm";
 import { ProjectPhasePicker } from "@/components/proyectos/ProjectPhasePicker";
 import { ProjectOwnerPicker } from "@/components/proyectos/ProjectOwnerPicker";
 import { useCanEdit } from "@/hooks/useCanEdit";
 import { phaseLabel } from "@/lib/phaseLabels";
+import { deleteWorkflow } from "@/lib/projectsApi";
 import type { OwnerCode, ProjectPhase, ProjectRecord } from "@/lib/projectTypes";
+
+const THREE_MONTHS_MS = 90 * 24 * 60 * 60 * 1000;
+
+function isOlderThan3Months(updatedAt: string | undefined): boolean {
+  if (!updatedAt) return false;
+  const ms = Date.now() - new Date(updatedAt).getTime();
+  return ms > THREE_MONTHS_MS;
+}
 
 function healthBadgeClasses(health: ProjectRecord["health"]): string {
   if (health === "en_riesgo") {
@@ -27,11 +37,32 @@ type Props = { project: ProjectRecord };
 
 export function WorkflowDetailShell({ project: initial }: Props) {
   const canEdit = useCanEdit();
+  const router = useRouter();
   const [project, setProject] = useState<ProjectRecord>(initial);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const panelId = useId();
+
+  const isArchived = project.phase === "archivado";
+  const canDelete = canEdit && isArchived && isOlderThan3Months(project.updatedAt);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteWorkflow(project.id);
+      router.push("/workflows");
+      router.refresh();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Error al eliminar.");
+      setDeleting(false);
+      setDeleteConfirm(false);
+    }
+  };
 
   useEffect(() => {
     setProject(initial);
@@ -79,19 +110,30 @@ export function WorkflowDetailShell({ project: initial }: Props) {
             </span>
             Volver a workflows
           </Link>
-          {canEdit ? (
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-500/30"
-            >
-              Editar
-            </button>
-          ) : (
-            <span className="inline-flex shrink-0 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-400">
-              Solo lectura
-            </span>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => { setDeleteConfirm(true); setDeleteError(null); }}
+                className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-800 shadow-sm transition hover:bg-rose-100 focus:outline-none focus:ring-4 focus:ring-rose-500/20"
+              >
+                Eliminar
+              </button>
+            )}
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-500/30"
+              >
+                Editar
+              </button>
+            ) : (
+              <span className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-400">
+                Solo lectura
+              </span>
+            )}
+          </div>
         </div>
 
         <header className="relative mt-6 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/80 to-sky-50/40 px-6 py-8 shadow-sm sm:px-8 sm:py-10">
@@ -122,6 +164,38 @@ export function WorkflowDetailShell({ project: initial }: Props) {
             </div>
           </div>
         </header>
+
+        {deleteConfirm && (
+          <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
+            <p className="text-sm font-semibold text-rose-900">
+              ¿Eliminar permanentemente este workflow archivado?
+            </p>
+            <p className="mt-1 text-xs text-rose-700">
+              Esta acción no se puede deshacer. Se eliminará del sistema y de todos los registros vinculados.
+            </p>
+            {deleteError && (
+              <p className="mt-2 text-xs font-semibold text-rose-800">{deleteError}</p>
+            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-rose-800 disabled:opacity-60"
+              >
+                {deleting ? "Eliminando…" : "Sí, eliminar"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(false)}
+                disabled={deleting}
+                className="rounded-lg border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         <section className="mt-8 space-y-4">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Gestión</h2>

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { useMemo } from "react";
 import { ItProjectWorkflowLinksPanel } from "@/components/it-projects/ItProjectWorkflowLinksPanel";
 import { useMergedItProjects } from "@/lib/itProjectsLocalStore";
-import { phaseLabel, riskLabel } from "@/lib/itProjectPortfolio";
+import { phaseLabel, riskLabel, urgencyLabel, urgencyBadgeClass } from "@/lib/itProjectPortfolio";
 import type { ItProject } from "@/lib/itProjectTypes";
 
 function riskBarClass(risk: "bajo" | "medio" | "alto"): string {
@@ -61,6 +61,9 @@ function ItProjectDetailBody({ p }: { p: ItProject }) {
             </span>
             <span className="inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-white">
               Riesgo: {riskLabel(p.riskLevel)}
+            </span>
+            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset ${urgencyBadgeClass(p.urgencyLevel)}`}>
+              Urgencia: {urgencyLabel(p.urgencyLevel)}
             </span>
           </div>
         </div>

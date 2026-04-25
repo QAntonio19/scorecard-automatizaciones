@@ -300,3 +300,12 @@ export async function supabasePatchWorkflowDetails(
   const { error } = await sb.from("workflows").update(row).eq("id", pk);
   if (error) throw new HttpError(500, "SUPABASE_ERROR", error.message);
 }
+
+export async function deleteProjectFromSupabase(projectId: string): Promise<boolean> {
+  const pk = await resolveWorkflowPk(projectId);
+  if (!pk) return false;
+  const sb = getSupabaseServerClient();
+  const { error } = await sb.from("workflows").delete().eq("id", pk);
+  if (error) throw new HttpError(500, "SUPABASE_ERROR", error.message);
+  return true;
+}

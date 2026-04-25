@@ -4,9 +4,9 @@
  */
 
 import { IT_PROJECTS_SEED } from "@/data/it-projects.seed";
-import type { ItProject, ItProjectPhase, ItProjectRisk } from "@/lib/itProjectTypes";
+import type { ItProject, ItProjectPhase, ItProjectRisk, ItProjectUrgency } from "@/lib/itProjectTypes";
 
-export type { ItProject, ItProjectMilestone, ItProjectPhase, ItProjectRisk } from "@/lib/itProjectTypes";
+export type { ItProject, ItProjectMilestone, ItProjectPhase, ItProjectRisk, ItProjectUrgency } from "@/lib/itProjectTypes";
 
 export function listItProjects(): ItProject[] {
   return IT_PROJECTS_SEED;
@@ -43,6 +43,22 @@ export function riskLabel(risk: ItProjectRisk): string {
     alto: "Alto",
   };
   return map[risk];
+}
+
+export function urgencyLabel(urgency: ItProjectUrgency | undefined): string {
+  if (!urgency) return "Media";
+  const map: Record<ItProjectUrgency, string> = {
+    baja: "Baja",
+    media: "Media",
+    alta: "Alta",
+  };
+  return map[urgency];
+}
+
+export function urgencyBadgeClass(urgency: ItProjectUrgency | undefined): string {
+  if (urgency === "alta") return "bg-rose-100 text-rose-800 ring-rose-200";
+  if (urgency === "baja") return "bg-emerald-100 text-emerald-800 ring-emerald-200";
+  return "bg-amber-100 text-amber-800 ring-amber-200";
 }
 
 /** Misma lógica visual que `workflowPhaseTopBorderClass` en flujos (acento por fase). */

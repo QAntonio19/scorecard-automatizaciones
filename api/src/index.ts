@@ -25,6 +25,7 @@ import {
   setProjectOwner,
   setProjectPhase,
 } from "./services/projectService.js";
+import { deleteProject } from "./projectStore.js";
 import { listAutomationsQuerySchema } from "./validation.js";
 import {
   listProjectsQuerySchema,
@@ -126,6 +127,25 @@ app.get("/api/projects", async (req, res, next) => {
     const platforms = parsePlatformFilter(query.platform);
     const result = await listProjects(query, owners, health, platforms);
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.delete("/api/projects/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id?.trim()) {
+      res.status(400).json({ error: "ID requerido." });
+      return;
+    }
+    const deleted = await deleteProject(id.trim());
+    if (!deleted) {
+      res.status(404).json({ error: "Workflow no encontrado." });
+      return;
+    }
+    invalidateSummaryCache();
+    res.status(200).json({ deleted: true, id: id.trim() });
   } catch (err) {
     next(err);
   }

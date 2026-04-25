@@ -36,6 +36,8 @@ export interface ProjectRecord {
   riskNote: string | null;
   complexity: number;
   businessValue: number;
+  /** ISO-8601: última modificación del workflow en la plataforma de origen (n8n, Make). */
+  updatedAt?: string;
 }
 
 export interface ProjectsListResponse {

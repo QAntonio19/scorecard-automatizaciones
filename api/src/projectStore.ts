@@ -212,3 +212,56 @@ export async function readProjects(): Promise<ProjectRecord[]> {
   }
   return readMergedProjectsFromJson();
 }
+
+/**
+ * Elimina un proyecto por id de ambos stores (base + external).
+ * Limpia también sus overrides de responsable, fase y detalles.
+ */
+export function deleteProjectFromJson(id: string): boolean {
+  let deleted = false;
+
+  // base (projects.json)
+  const base = readBaseProjects();
+  const baseFiltered = base.filter((p) => p.id !== id);
+  if (baseFiltered.length < base.length) {
+    writeFileSync(dataPath, JSON.stringify(baseFiltered, null, 2), "utf-8");
+    deleted = true;
+  }
+
+  // external (external-projects.json)
+  if (existsSync(externalDataPath)) {
+    const ext = readExternalProjects();
+    const extFiltered = ext.filter((p) => p.id !== id);
+    if (extFiltered.length < ext.length) {
+      writeExternalProjects(extFiltered);
+      deleted = true;
+    }
+  }
+
+  // limpiar overrides huérfanos
+  const owner = readOwnerOverrides();
+  if (id in owner) {
+    delete owner[id];
+    writeOwnerOverrides(owner);
+  }
+  const phase = readPhaseOverrides();
+  if (id in phase) {
+    delete phase[id];
+    writePhaseOverrides(phase);
+  }
+  const details = readDetailsOverrides();
+  if (id in details) {
+    delete details[id];
+    writeDetailsOverrides(details);
+  }
+
+  return deleted;
+}
+
+export async function deleteProject(id: string): Promise<boolean> {
+  if (getProjectsDataMode() === "supabase") {
+    const { deleteProjectFromSupabase } = await import("./services/supabaseProjectRepository.js");
+    return deleteProjectFromSupabase(id);
+  }
+  return deleteProjectFromJson(id);
+}
