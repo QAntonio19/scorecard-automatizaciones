@@ -6,6 +6,17 @@
   },
   "releases": [
     {
+      "version": "1.14.0",
+      "date": "2026-04-27",
+      "releasedAt": "2026-04-27T23:30:00Z",
+      "changes": [
+        "Limpieza — eliminados 5 SVGs del boilerplate de Next.js (`file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg`) en `web/public/`; no se referenciaban en ningún componente ni stylesheet",
+        "Limpieza — eliminados artefactos de build locales: `api/dist/`, `web/.next/`, `web/.vercel/` y `web/tsconfig.tsbuildinfo`; se regeneran automáticamente al compilar y ya estaban excluidos por `.gitignore`",
+        "Limpieza — eliminados directorios vacíos `web/components/auth/` y `web/lib/types/` que nunca se poblaron; la lógica de auth reside en `app/(auth)/login/` y `lib/authLoginInput.ts`",
+        "Mantenimiento — análisis completo del repositorio para identificar archivos eliminables sin impacto funcional; verificación de imports, referencias en código y estado en Git"
+      ]
+    },
+    {
       "version": "1.13.0",
       "date": "2026-04-24",
       "releasedAt": "2026-04-24T20:00:00Z",
