@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { IconBriefcase, IconFolder, IconPanel } from "@/components/icons/NavIcons";
+import { IconBriefcase, IconPanel } from "@/components/icons/NavIcons";
 import { DeploymentChangelogModal } from "@/components/layout/DeploymentChangelogModal";
 import { SidebarUserBlock } from "@/components/layout/SidebarUserBlock";
 import { getCurrentVersion } from "@/lib/deploymentChangelog";
 
 const nav = [
   { href: "/panel", label: "Panel", Icon: IconPanel },
-  { href: "/workflows", label: "Workflows", Icon: IconFolder },
   { href: "/proyectos", label: "Proyectos", Icon: IconBriefcase },
 ] as const;
 
@@ -78,7 +77,7 @@ export function Sidebar({
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-900">ExpertizITAI</p>
             <p className="truncate text-xs font-medium uppercase tracking-wide text-slate-500">
-              Workflows ITAI
+              Proyectos ITAI
             </p>
           </div>
         ) : null}

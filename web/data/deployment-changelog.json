@@ -6,6 +6,18 @@
   },
   "releases": [
     {
+      "version": "1.15.0",
+      "date": "2026-05-04",
+      "releasedAt": "2026-05-04T17:30:00Z",
+      "changes": [
+        "Proyectos IT — Integración en tiempo real con la API de Notion. Los proyectos se listan y sincronizan dinámicamente.",
+        "Proyectos IT — Mapeo inteligente de fases (Estrategia, Planificación, Ejecución, Cierre, Archivado) leyendo la columna 'Estatus' o la casilla 'archivar' en Notion.",
+        "Limpieza de Workflows — Eliminación completa de la infraestructura heredada de Workflows en el Frontend y en la configuración de base de datos (Supabase).",
+        "Limpieza — Enlaces, rutas de error 404 y menús laterales reconfigurados para enfocarse exclusivamente en el dominio de Proyectos ITAI.",
+        "Mantenimiento — Configuración de variables de entorno lista para producción (.env.example actualizado)."
+      ]
+    },
+    {
       "version": "1.14.0",
       "date": "2026-04-27",
       "releasedAt": "2026-04-27T23:30:00Z",

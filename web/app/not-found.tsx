@@ -9,10 +9,10 @@ export default function NotFound() {
           El recurso pudo moverse o el enlace es incorrecto.
         </p>
         <Link
-          href="/workflows"
+          href="/proyectos"
           className="mt-6 inline-flex rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
         >
-          Ir a workflows
+          Ir a proyectos
         </Link>
       </div>
     </div>

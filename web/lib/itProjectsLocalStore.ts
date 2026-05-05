@@ -2,11 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { IT_PROJECTS_SEED } from "@/data/it-projects.seed";
-import {
-  applyWorkflowLinkOverrides,
-  IT_PROJECT_WORKFLOW_LINKS_CHANGED_EVENT,
-  readWorkflowLinkOverrides,
-} from "@/lib/itProjectWorkflowLinksStore";
 import type { ItProject } from "@/lib/itProjectTypes";
 
 export const IT_PROJECTS_USER_STORAGE_KEY = "scorecard-it-projects-user-v1";
@@ -64,30 +59,50 @@ export function appendUserProject(project: ItProject): void {
   window.dispatchEvent(new CustomEvent(IT_PROJECTS_CHANGED_EVENT));
 }
 
-export function useMergedItProjects(): { projects: ItProject[]; ready: boolean } {
+export function useMergedItProjects(): { projects: ItProject[]; ready: boolean; error?: string } {
   const [mounted, setMounted] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [user, setUser] = useState<ItProject[]>([]);
-  const [linkOverrides, setLinkOverrides] = useState<ReturnType<typeof readWorkflowLinkOverrides>>({});
+  const [notionData, setNotionData] = useState<ItProject[]>(IT_PROJECTS_SEED);
+  const [error, setError] = useState<string>();
 
   useEffect(() => {
     setMounted(true);
     const sync = () => {
       setUser(readUserProjects());
-      setLinkOverrides(readWorkflowLinkOverrides());
     };
     sync();
     window.addEventListener(IT_PROJECTS_CHANGED_EVENT, sync);
-    window.addEventListener(IT_PROJECT_WORKFLOW_LINKS_CHANGED_EVENT, sync);
+    
+    // Fetch from Notion API
+    fetch("/api/notion/projects")
+      .then(res => {
+        if (!res.ok) throw new Error("Error HTTP");
+        return res.json();
+      })
+      .then(data => {
+        if (data.projects) {
+          setNotionData(data.projects);
+        } else if (data.error) {
+          setError(data.error);
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching Notion projects:", err);
+        setError("Error fetching Notion projects");
+      })
+      .finally(() => {
+        setFetching(false);
+      });
+
     return () => {
       window.removeEventListener(IT_PROJECTS_CHANGED_EVENT, sync);
-      window.removeEventListener(IT_PROJECT_WORKFLOW_LINKS_CHANGED_EVENT, sync);
     };
   }, []);
 
   const projects = useMemo(() => {
-    const base = mergeItProjectsWithSeed(IT_PROJECTS_SEED, user);
-    return applyWorkflowLinkOverrides(base, linkOverrides);
-  }, [user, linkOverrides]);
+    return mergeItProjectsWithSeed(notionData, user);
+  }, [notionData, user]);
 
-  return { projects, ready: mounted };
+  return { projects, ready: mounted && !fetching, error };
 }

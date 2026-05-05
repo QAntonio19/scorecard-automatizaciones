@@ -14,7 +14,6 @@ const isProduction = process.env.NODE_ENV === "production";
 
 function isProtectedPath(pathname: string): boolean {
   if (pathname.startsWith("/panel")) return true;
-  if (pathname.startsWith("/workflows")) return true;
   if (pathname.startsWith("/proyectos")) return true;
   return false;
 }
@@ -77,7 +76,7 @@ export async function middleware(request: NextRequest) {
   const nextParam = search ? `${pathname}${search}` : pathname;
 
   if (user && isAuthPath(pathname) && pathname === "/login") {
-    return redirectWithAuthCookies(request, new URL("/panel", request.url), sessionResponse);
+    return redirectWithAuthCookies(request, new URL("/proyectos", request.url), sessionResponse);
   }
 
   if (!user && isProtectedPath(pathname)) {
@@ -91,7 +90,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && pathname === "/") {
-    return redirectWithAuthCookies(request, new URL("/panel", request.url), sessionResponse);
+    return redirectWithAuthCookies(request, new URL("/proyectos", request.url), sessionResponse);
   }
 
   return sessionResponse;

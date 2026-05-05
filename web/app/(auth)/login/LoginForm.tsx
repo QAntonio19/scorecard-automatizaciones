@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { safeParseLoginCredentials } from "@/lib/authLoginInput";
 import { createBrowserSupabaseClient, isSupabaseAuthConfigured } from "@/lib/supabase/client";
 
-const DEFAULT_NEXT = "/panel";
+const DEFAULT_NEXT = "/proyectos";
 
 export function LoginForm() {
   const router = useRouter();

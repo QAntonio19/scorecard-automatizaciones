@@ -1,8 +1,5 @@
 "use client";
 
-import { ApiBackendMissingEnv, ApiBackendUnreachable } from "@/components/deployment/ApiBackendNotice";
-import { isApiNotConfiguredError } from "@/lib/projectsApi";
-
 export default function DashboardError({
   error,
   reset,
@@ -10,14 +7,11 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const missing =
-    isApiNotConfiguredError(error) ||
-    error?.message?.includes("API_NOT_CONFIGURED") === true;
-
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center px-4 py-10">
-      <div className="w-full max-w-2xl">
-        {missing ? <ApiBackendMissingEnv /> : <ApiBackendUnreachable />}
+      <div className="w-full max-w-2xl text-center">
+        <h2 className="text-xl font-bold text-slate-900">Algo salió mal</h2>
+        <p className="mt-2 text-sm text-slate-600">Hubo un error al cargar la página.</p>
         {error.digest ? (
           <p className="mt-6 text-center text-xs text-slate-400">Digest: {error.digest}</p>
         ) : null}

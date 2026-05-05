@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useMemo } from "react";
-import { ItProjectWorkflowLinksPanel } from "@/components/it-projects/ItProjectWorkflowLinksPanel";
+
 import { useMergedItProjects } from "@/lib/itProjectsLocalStore";
 import { phaseLabel, riskLabel, urgencyLabel, urgencyBadgeClass } from "@/lib/itProjectPortfolio";
 import type { ItProject } from "@/lib/itProjectTypes";
@@ -133,7 +133,6 @@ function ItProjectDetailBody({ p }: { p: ItProject }) {
         )}
       </section>
 
-      <ItProjectWorkflowLinksPanel project={p} />
     </div>
   );
 }

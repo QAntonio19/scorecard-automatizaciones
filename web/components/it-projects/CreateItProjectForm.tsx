@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useCanEdit } from "@/hooks/useCanEdit";
 import { appendUserProject } from "@/lib/itProjectsLocalStore";
 import { IT_PROJECT_PHASE_ORDER, phaseLabel } from "@/lib/itProjectPortfolio";
-import { fetchProjectsList, isApiNotConfiguredError } from "@/lib/projectsApi";
 import type { ItProject, ItProjectPhase, ItProjectRisk, ItProjectUrgency } from "@/lib/itProjectTypes";
-import type { ProjectRecord } from "@/lib/projectTypes";
 
 function newId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -38,59 +36,11 @@ export function CreateItProjectForm() {
   const [riskLevel, setRiskLevel] = useState<ItProjectRisk>("medio");
   const [urgencyLevel, setUrgencyLevel] = useState<ItProjectUrgency>("media");
 
-  // Catálogo de workflows para el selector
-  const [catalog, setCatalog] = useState<ProjectRecord[]>([]);
-  const [catalogLoaded, setCatalogLoaded] = useState(false);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [pickId, setPickId] = useState("");
-  const [manualId, setManualId] = useState("");
-  const [linkedIds, setLinkedIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<FormError>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const { items } = await fetchProjectsList({});
-        if (!cancelled) { setCatalog(items); setCatalogError(null); }
-      } catch (e) {
-        if (!cancelled) {
-          setCatalogError(
-            isApiNotConfiguredError(e)
-              ? "Sin API configurada. Usa la opción por ID."
-              : e instanceof Error ? e.message : "No se pudo cargar el catálogo.",
-          );
-        }
-      } finally {
-        if (!cancelled) setCatalogLoaded(true);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
-  const nameById = useMemo(() => new Map(catalog.map((w) => [w.id, w.name])), [catalog]);
-
-  const availableInCatalog = useMemo(() => {
-    const linked = new Set(linkedIds);
-    return catalog.filter((w) => !linked.has(w.id)).sort((a, b) => a.name.localeCompare(b.name, "es"));
-  }, [catalog, linkedIds]);
-
-  const addPicked = () => {
-    if (!pickId) return;
-    setLinkedIds((prev) => [...prev, pickId]);
-    setPickId("");
-  };
-
-  const addManual = () => {
-    const id = manualId.trim();
-    if (!id || linkedIds.includes(id)) { setManualId(""); return; }
-    setLinkedIds((prev) => [...prev, id]);
-    setManualId("");
-  };
-
-  const removeLinked = (id: string) => setLinkedIds((prev) => prev.filter((x) => x !== id));
 
   const validate = (): boolean => {
     const next: FormError = {};
@@ -128,7 +78,6 @@ export function CreateItProjectForm() {
         targetEndDate: targetEndDate || "—",
         riskLevel,
         urgencyLevel,
-        linkedWorkflowIds: linkedIds,
         milestones: [],
       };
       appendUserProject(project);
@@ -301,107 +250,7 @@ export function CreateItProjectForm() {
       </div>
       {errors.dates ? <p className="text-xs text-rose-600">{errors.dates}</p> : null}
 
-      <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-          Workflows relacionados <span className="font-normal normal-case text-slate-400">(opcional)</span>
-        </p>
 
-        {catalogLoaded && catalogError ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            {catalogError}
-          </p>
-        ) : null}
-
-        {/* Lista de seleccionados */}
-        {linkedIds.length > 0 ? (
-          <ul className="space-y-1.5">
-            {linkedIds.map((wid) => (
-              <li
-                key={wid}
-                className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-900">{nameById.get(wid) ?? wid}</p>
-                  {nameById.has(wid) ? (
-                    <p className="font-mono text-[10px] text-slate-400">{wid}</p>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeLinked(wid)}
-                  className="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-800"
-                >
-                  Quitar
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xs text-slate-400">Ningún workflow añadido aún.</p>
-        )}
-
-        {/* Selector del catálogo */}
-        <div>
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-            Añadir desde el scorecard
-          </p>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[min(100%,16rem)] flex-1">
-              <select
-                value={pickId}
-                onChange={(e) => setPickId(e.target.value)}
-                disabled={!catalogLoaded || availableInCatalog.length === 0}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-sky-500/30 focus:ring-2 disabled:opacity-50"
-              >
-                <option value="">
-                  {!catalogLoaded
-                    ? "Cargando catálogo…"
-                    : availableInCatalog.length === 0
-                      ? "No hay más workflows para añadir"
-                      : "Selecciona un workflow…"}
-                </option>
-                {availableInCatalog.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="button"
-              onClick={addPicked}
-              disabled={!pickId}
-              className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-sky-800 disabled:opacity-50"
-            >
-              Añadir
-            </button>
-          </div>
-        </div>
-
-        {/* Añadir por ID manual */}
-        <div>
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-            Añadir por ID
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              value={manualId}
-              onChange={(e) => setManualId(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }}
-              placeholder="ID del workflow (ej. n8n-abc123)"
-              className="min-w-[min(100%,18rem)] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 outline-none ring-sky-500/30 focus:ring-2"
-            />
-            <button
-              type="button"
-              onClick={addManual}
-              disabled={!manualId.trim()}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-            >
-              Añadir ID
-            </button>
-          </div>
-        </div>
-      </div>
 
       {submitError ? (
         <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900" role="alert">

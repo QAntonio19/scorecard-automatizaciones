@@ -28,7 +28,6 @@ export interface ItProject {
   targetEndDate: string;
   riskLevel: ItProjectRisk;
   urgencyLevel?: ItProjectUrgency;
-  /** IDs de filas en el scorecard de Workflows (`/workflows/[id]`). */
-  linkedWorkflowIds: string[];
+
   milestones: ItProjectMilestone[];
 }
