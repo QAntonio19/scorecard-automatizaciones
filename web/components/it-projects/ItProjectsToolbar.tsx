@@ -6,7 +6,8 @@ import { buildItProjectsQuery, type VistaProyectosIt } from "@/lib/itProjectsUrl
 import type { ItProjectPhase } from "@/lib/itProjectTypes";
 
 const PHASE_IDS: ItProjectPhase[] = [
-  "estrategia",
+  "backlog",
+  "sin_empezar",
   "planificacion",
   "ejecucion",
   "cierre",

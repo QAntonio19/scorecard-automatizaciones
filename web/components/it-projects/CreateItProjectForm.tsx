@@ -28,7 +28,7 @@ export function CreateItProjectForm() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [phase, setPhase] = useState<ItProjectPhase>("estrategia");
+  const [phase, setPhase] = useState<ItProjectPhase>("sin_empezar");
   const [sponsor, setSponsor] = useState("");
   const [pmName, setPmName] = useState("");
   const [startDate, setStartDate] = useState("");

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import type { ItProject, ItProjectPhase } from "@/lib/itProjectTypes";
+import type { ItProject } from "@/lib/itProjectTypes";
+import { mapNotionEstatusToPhase } from "@/lib/notionEstatusPhase";
+import { resolveItProjectPmName } from "@/lib/notionProjectResponsable";
 
 export const revalidate = 0;
 
@@ -40,18 +42,7 @@ export async function GET() {
       const estatusProp = props?.Estatus as Record<string, unknown> | undefined;
       const estatusValue = (estatusProp?.status as Record<string, unknown> | undefined)?.name as string | undefined;
 
-      let phase: ItProjectPhase = "ejecucion";
-      if (isArchived || estatusValue === "Archivado") {
-        phase = "archivado";
-      } else if (estatusValue === "Backlog" || estatusValue === "Sin empezar") {
-        phase = "estrategia";
-      } else if (estatusValue === "En planificacion") {
-        phase = "planificacion";
-      } else if (estatusValue === "En proceso") {
-        phase = "ejecucion";
-      } else if (estatusValue === "Completado") {
-        phase = "cierre";
-      }
+      const phase = mapNotionEstatusToPhase(estatusValue, isArchived);
 
       const nombre = props?.Nombre as Record<string, unknown> | undefined;
       const titleProp = nombre?.title as Array<Record<string, unknown>> | undefined;
@@ -60,6 +51,7 @@ export async function GET() {
         : "Proyecto sin nombre";
       const id = row.id as string;
       const created_time = row.created_time as string | undefined;
+      const pmName = resolveItProjectPmName(props, name);
 
       return {
         id,
@@ -68,7 +60,7 @@ export async function GET() {
         description: "",
         phase,
         sponsor: "Notion Sync",
-        pmName: "Equipo IT",
+        pmName,
         startDate: created_time || new Date().toISOString(),
         targetEndDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
         riskLevel: "bajo",

@@ -16,12 +16,14 @@ export function getItProjectById(id: string): ItProject | undefined {
   return IT_PROJECTS_SEED.find((p) => p.id === id);
 }
 
+/** Etiquetas = nombres de opción en Notion (`Estatus`). */
 export function phaseLabel(phase: ItProjectPhase): string {
   const map: Record<ItProjectPhase, string> = {
-    estrategia: "Estrategia",
-    planificacion: "Planificación",
-    ejecucion: "Ejecución",
-    cierre: "Cierre",
+    backlog: "Backlog",
+    sin_empezar: "Sin empezar",
+    planificacion: "En planificación",
+    ejecucion: "En proceso",
+    cierre: "Completado",
     archivado: "Archivado",
   };
   return map[phase];
@@ -29,7 +31,8 @@ export function phaseLabel(phase: ItProjectPhase): string {
 
 /** Orden de columnas en el Kanban de proyectos IT (izquierda → derecha). */
 export const IT_PROJECT_PHASE_ORDER: ItProjectPhase[] = [
-  "estrategia",
+  "backlog",
+  "sin_empezar",
   "planificacion",
   "ejecucion",
   "cierre",
@@ -64,11 +67,12 @@ export function urgencyBadgeClass(urgency: ItProjectUrgency | undefined): string
 /** Misma lógica visual que `workflowPhaseTopBorderClass` en flujos (acento por fase). */
 export function itPhaseTopBorderClass(phase: ItProjectPhase): string {
   const map: Record<ItProjectPhase, string> = {
-    estrategia: "border-t-slate-400",
+    backlog: "border-t-slate-500",
+    sin_empezar: "border-t-slate-400",
     planificacion: "border-t-amber-400",
     ejecucion: "border-t-sky-500",
     cierre: "border-t-emerald-500",
-    archivado: "border-t-slate-500",
+    archivado: "border-t-slate-600",
   };
   return map[phase];
 }

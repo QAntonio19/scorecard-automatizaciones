@@ -11,10 +11,15 @@
       "releasedAt": "2026-05-04T17:30:00Z",
       "changes": [
         "Proyectos IT — Integración en tiempo real con la API de Notion. Los proyectos se listan y sincronizan dinámicamente.",
-        "Proyectos IT — Mapeo inteligente de fases (Estrategia, Planificación, Ejecución, Cierre, Archivado) leyendo la columna 'Estatus' o la casilla 'archivar' en Notion.",
+        "Proyectos IT — Mapeo desde la columna `Estatus` y la casilla `archivar` en Notion (`mapNotionEstatusToPhase`): valores reales Backlog, Sin empezar, En planificación, En proceso, Completado, Archivado → fases internas; **Backlog** y **Sin empezar** son columnas Kanban distintas.",
+        "Proyectos IT — Etiquetas de fase y orden de columnas alineados a esos estados de Notion (`phaseLabel`, `IT_PROJECT_PHASE_ORDER`); sin mezclar dos estatus en una sola columna.",
+        "Proyectos IT — Responsable en `pmName`: lectura de la propiedad Notion `Responsable` (people / multi_select / select / rich_text) más mapa de respaldo por nombre de proyecto (`notionProjectResponsable.ts`).",
+        "Proyectos IT — Normalización al cargar proyectos desde localStorage: fase legada `estrategia` → `sin_empezar`.",
         "Limpieza de Workflows — Eliminación completa de la infraestructura heredada de Workflows en el Frontend y en la configuración de base de datos (Supabase).",
         "Limpieza — Enlaces, rutas de error 404 y menús laterales reconfigurados para enfocarse exclusivamente en el dominio de Proyectos ITAI.",
-        "Mantenimiento — Configuración de variables de entorno lista para producción (.env.example actualizado)."
+        "Mantenimiento — Configuración de variables de entorno lista para producción (.env.example actualizado).",
+        "Base de datos — `scripts/supabase-schema-webapp-current.sql`: modelo `public.projects` (ItProject: code, name, phase, sponsor, pm_name, milestones JSONB, notion_page_id, etc.), FK `responsable_id` → `responsables`, tabla `tecnologias` y N:N `project_tecnologias`; elimina restos del modelo `workflows`/`workflow_*`; no altera `usuarios` ni `auth`.",
+        "Base de datos — `supabase-migration.sql` deja de aplicar DDL antiguo y remite al script anterior para el esquema vigente."
       ]
     },
     {

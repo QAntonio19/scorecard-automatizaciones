@@ -1,5 +1,6 @@
 export type ItProjectPhase =
-  | "estrategia"
+  | "backlog"
+  | "sin_empezar"
   | "planificacion"
   | "ejecucion"
   | "cierre"

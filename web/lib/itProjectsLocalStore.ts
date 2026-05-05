@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { IT_PROJECTS_SEED } from "@/data/it-projects.seed";
-import type { ItProject } from "@/lib/itProjectTypes";
+import { IT_PROJECT_PHASE_ORDER } from "@/lib/itProjectPortfolio";
+import type { ItProject, ItProjectPhase } from "@/lib/itProjectTypes";
 
 export const IT_PROJECTS_USER_STORAGE_KEY = "scorecard-it-projects-user-v1";
 
@@ -27,6 +28,18 @@ function isItProjectRecord(x: unknown): x is ItProject {
   return true;
 }
 
+/** Fase única antigua `estrategia` (Backlog+Sin empezar mezclados) → Sin empezar. */
+function normalizeStoredProject(p: ItProject): ItProject {
+  const raw = p.phase as string;
+  if (raw === "estrategia") {
+    return { ...p, phase: "sin_empezar" };
+  }
+  if (IT_PROJECT_PHASE_ORDER.includes(raw as ItProjectPhase)) {
+    return { ...p, phase: raw as ItProjectPhase };
+  }
+  return { ...p, phase: "sin_empezar" };
+}
+
 export function readUserProjects(): ItProject[] {
   if (typeof window === "undefined") return [];
   try {
@@ -34,7 +47,7 @@ export function readUserProjects(): ItProject[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isItProjectRecord);
+    return parsed.filter(isItProjectRecord).map(normalizeStoredProject);
   } catch {
     return [];
   }

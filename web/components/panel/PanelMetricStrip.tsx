@@ -63,7 +63,7 @@ export function PanelMetricStrip({ projects }: { projects: ItProject[] }) {
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="En cartera" value={total} sub="proyectos registrados" />
-        <MetricCard label="En ejecución" value={enEjecucion} sub="con entregas activas" accent="sky" />
+        <MetricCard label="En proceso" value={enEjecucion} sub="con entregas activas" accent="sky" />
         <MetricCard label="Alto riesgo" value={altoRiesgo} sub="requieren atención" accent="rose" />
         <MetricCard
           label="Hitos completados"
@@ -78,7 +78,8 @@ export function PanelMetricStrip({ projects }: { projects: ItProject[] }) {
         <div className="flex flex-wrap gap-2">
           {byPhase.map(({ phase, label, count }) => {
             const colorMap: Record<string, string> = {
-              estrategia: "bg-slate-400",
+              backlog: "bg-slate-500",
+              sin_empezar: "bg-slate-400",
               planificacion: "bg-amber-400",
               ejecucion: "bg-sky-500",
               cierre: "bg-emerald-500",

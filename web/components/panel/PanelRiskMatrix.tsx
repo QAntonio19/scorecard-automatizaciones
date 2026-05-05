@@ -13,7 +13,8 @@ const RISK_COLOR: Record<ItProject["riskLevel"], string> = {
   bajo: "#22c55e",
 };
 const PHASE_ICON: Record<string, string> = {
-  estrategia: "📋",
+  backlog: "📥",
+  sin_empezar: "📋",
   planificacion: "🗓️",
   ejecucion: "⚡",
   cierre: "✅",

@@ -62,7 +62,7 @@ export function ItProjectsKanbanBoard({ projects }: Props) {
   }
 
   return (
-    <div className="grid min-h-0 grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="grid min-h-0 grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {IT_PROJECT_PHASE_ORDER.map((phase) => (
         <KanbanColumn key={phase} phase={phase} projects={projects} />
       ))}
