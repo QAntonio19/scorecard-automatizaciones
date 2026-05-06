@@ -43,7 +43,7 @@ export function ProyectosPortfolioContent() {
   const fase = parsePhase(searchParams.get("fase"));
   const vista = parseVistaProyectosIt(searchParams.get("vista") ?? undefined);
 
-  const { projects: all, ready } = useMergedItProjects();
+  const { projects: all, ready, error: notionFetchError } = useMergedItProjects();
 
   const filtered = useMemo(() => filterItProjects(all, { q, phase: fase }), [all, q, fase]);
   const inExecution = useMemo(() => all.filter((p) => p.phase === "ejecucion").length, [all]);
@@ -70,6 +70,24 @@ export function ProyectosPortfolioContent() {
           </Link>
         ) : null}
       </header>
+
+      {notionFetchError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+        >
+          <p className="font-semibold">No se pudo sincronizar con Notion</p>
+          <p className="mt-1 text-amber-900/90">
+            Se muestran solo los proyectos de ejemplo del repositorio y los que tengas guardados en este
+            navegador. En el despliegue (p. ej. Vercel) revisa que existan{" "}
+            <code className="rounded bg-amber-100/80 px-1 text-xs">NOTION_API_KEY</code> y{" "}
+            <code className="rounded bg-amber-100/80 px-1 text-xs">NOTION_IT_PROJECTS_DB_ID</code>{" "}
+            en Variables de entorno y vuelve a desplegar. Comprueba la respuesta de{" "}
+            <code className="rounded bg-amber-100/80 px-1 text-xs">/api/notion/projects</code> en
+            las herramientas de red.
+          </p>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

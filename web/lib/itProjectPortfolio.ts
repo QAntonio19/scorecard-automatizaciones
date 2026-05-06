@@ -6,7 +6,17 @@
 import { IT_PROJECTS_SEED } from "@/data/it-projects.seed";
 import type { ItProject, ItProjectPhase, ItProjectRisk, ItProjectUrgency } from "@/lib/itProjectTypes";
 
-export type { ItProject, ItProjectMilestone, ItProjectPhase, ItProjectRisk, ItProjectUrgency } from "@/lib/itProjectTypes";
+export type {
+  ItProject,
+  ItProjectDeliverable,
+  ItProjectKeyResult,
+  ItProjectMilestone,
+  ItProjectPhase,
+  ItProjectPlannedTask,
+  ItProjectRisk,
+  ItProjectSprint,
+  ItProjectUrgency,
+} from "@/lib/itProjectTypes";
 
 export function listItProjects(): ItProject[] {
   return IT_PROJECTS_SEED;

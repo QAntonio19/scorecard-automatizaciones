@@ -103,6 +103,95 @@ function ItProjectDetailBody({ p }: { p: ItProject }) {
         </section>
       </div>
 
+      <section className="mt-8">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Planeación de alcance</h2>
+        <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="flex min-h-0 flex-col rounded-xl border border-amber-200/80 bg-gradient-to-b from-amber-50/50 to-white p-5 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900">Resultados clave (KR)</h3>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Objetivos medibles del proyecto, enlazados desde Notion (propiedad <span className="font-mono">KR</span>).
+            </p>
+            {p.keyResults.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-500">
+                Sin KRs vinculados. En Notion, enlaza filas de <strong>ITAI: kr de proyectos</strong> en la columna KR del
+                proyecto.
+              </p>
+            ) : (
+              <div
+                className="mt-4 max-h-[min(22rem,50vh)] overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]"
+                role="region"
+                aria-label="Lista de resultados clave"
+              >
+                <ol className="list-decimal space-y-2 pl-4 text-sm text-slate-800">
+                  {p.keyResults.map((kr) => (
+                    <li key={kr.id} className="leading-snug marker:font-semibold marker:text-amber-700">
+                      {kr.title}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+
+          <div className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900">Sprints</h3>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Ventanas de iteración planeadas sobre el proyecto.
+            </p>
+            {p.sprints.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-500">No hay sprints definidos.</p>
+            ) : (
+              <div
+                className="mt-4 max-h-[min(22rem,50vh)] overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]"
+                role="region"
+                aria-label="Lista de sprints"
+              >
+                <ul className="space-y-3">
+                  {p.sprints.map((s) => (
+                    <li key={s.id} className="rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2.5">
+                      <span className="text-sm font-medium text-slate-900">{s.title}</span>
+                      {s.timeframe ? (
+                        <p className="mt-0.5 font-mono text-xs text-violet-800/90">{s.timeframe}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900">Entregables</h3>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Artefactos o resultados acordados (documentación, aplicaciones, informes…).
+            </p>
+            {p.deliverables.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-500">No hay entregables cargados.</p>
+            ) : (
+              <div
+                className="mt-4 max-h-[min(22rem,50vh)] overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]"
+                role="region"
+                aria-label="Lista de entregables"
+              >
+                <ul className="space-y-2">
+                  {p.deliverables.map((d) => (
+                    <li
+                      key={d.id}
+                      className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 rounded-lg border border-sky-100 bg-sky-50/35 px-3 py-2"
+                    >
+                      <span className="text-sm font-medium text-slate-900">{d.title}</span>
+                      {d.targetDate ? (
+                        <span className="tabular-nums text-xs font-medium text-sky-900/85">{d.targetDate}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       <section className="mt-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Hitos</h2>
         {p.milestones.length === 0 ? (

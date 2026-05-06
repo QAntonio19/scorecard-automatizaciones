@@ -13,6 +13,88 @@ function isStringArray(x: unknown): x is string[] {
   return Array.isArray(x) && x.every((i) => typeof i === "string");
 }
 
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return typeof x === "object" && x !== null;
+}
+
+function sanitizeMilestones(raw: unknown): ItProject["milestones"] {
+  if (!Array.isArray(raw)) return [];
+  const out: ItProject["milestones"] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i];
+    if (!isRecord(row)) continue;
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    if (!title) continue;
+    const id = typeof row.id === "string" ? row.id : `m-${i + 1}`;
+    const dueDate = typeof row.dueDate === "string" ? row.dueDate : "—";
+    const done = row.done === true;
+    out.push({ id, title, dueDate, done });
+  }
+  return out;
+}
+
+function sanitizeKeyResults(raw: unknown): ItProject["keyResults"] {
+  if (!Array.isArray(raw)) return [];
+  const out: ItProject["keyResults"] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i];
+    if (!isRecord(row)) continue;
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    if (!title) continue;
+    const id = typeof row.id === "string" ? row.id : `kr-${i + 1}`;
+    out.push({ id, title });
+  }
+  return out;
+}
+
+function sanitizePlannedTasks(raw: unknown): ItProject["plannedTasks"] {
+  if (!Array.isArray(raw)) return [];
+  const out: ItProject["plannedTasks"] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i];
+    if (!isRecord(row)) continue;
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    if (!title) continue;
+    const id = typeof row.id === "string" ? row.id : `task-${i + 1}`;
+    out.push({ id, title });
+  }
+  return out;
+}
+
+function sanitizeSprints(raw: unknown): ItProject["sprints"] {
+  if (!Array.isArray(raw)) return [];
+  const out: ItProject["sprints"] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i];
+    if (!isRecord(row)) continue;
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    if (!title) continue;
+    const id = typeof row.id === "string" ? row.id : `spr-${i + 1}`;
+    const timeframe =
+      typeof row.timeframe === "string" && row.timeframe.trim() ? row.timeframe.trim() : undefined;
+    out.push({ id, title, ...(timeframe ? { timeframe } : {}) });
+  }
+  return out;
+}
+
+function sanitizeDeliverables(raw: unknown): ItProject["deliverables"] {
+  if (!Array.isArray(raw)) return [];
+  const out: ItProject["deliverables"] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i];
+    if (!isRecord(row)) continue;
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    if (!title) continue;
+    const id = typeof row.id === "string" ? row.id : `del-${i + 1}`;
+    const targetDate =
+      typeof row.targetDate === "string" && row.targetDate.trim()
+        ? row.targetDate.trim()
+        : undefined;
+    out.push({ id, title, ...(targetDate ? { targetDate } : {}) });
+  }
+  return out;
+}
+
 function isItProjectRecord(x: unknown): x is ItProject {
   if (!x || typeof x !== "object") return false;
   const o = x as Record<string, unknown>;
@@ -31,13 +113,29 @@ function isItProjectRecord(x: unknown): x is ItProject {
 /** Fase única antigua `estrategia` (Backlog+Sin empezar mezclados) → Sin empezar. */
 function normalizeStoredProject(p: ItProject): ItProject {
   const raw = p.phase as string;
+  const krSource =
+    Array.isArray(p.keyResults) ? p.keyResults : (p as unknown as { keyResults?: unknown }).keyResults;
+  const milestoneSource = Array.isArray(p.milestones) ? p.milestones : (p as unknown as { milestones?: unknown }).milestones;
+  const ptSource = Array.isArray(p.plannedTasks) ? p.plannedTasks : (p as unknown as { plannedTasks?: unknown }).plannedTasks;
+  const sprintSource = Array.isArray(p.sprints) ? p.sprints : (p as unknown as { sprints?: unknown }).sprints;
+  const delSource = Array.isArray(p.deliverables) ? p.deliverables : (p as unknown as { deliverables?: unknown }).deliverables;
+
+  const base: Omit<ItProject, "phase"> & { phase: ItProjectPhase } = {
+    ...p,
+    milestones: sanitizeMilestones(milestoneSource),
+    keyResults: sanitizeKeyResults(krSource),
+    plannedTasks: sanitizePlannedTasks(ptSource),
+    sprints: sanitizeSprints(sprintSource),
+    deliverables: sanitizeDeliverables(delSource),
+  };
+
   if (raw === "estrategia") {
-    return { ...p, phase: "sin_empezar" };
+    return { ...base, phase: "sin_empezar" };
   }
   if (IT_PROJECT_PHASE_ORDER.includes(raw as ItProjectPhase)) {
-    return { ...p, phase: raw as ItProjectPhase };
+    return { ...base, phase: raw as ItProjectPhase };
   }
-  return { ...p, phase: "sin_empezar" };
+  return { ...base, phase: "sin_empezar" };
 }
 
 export function readUserProjects(): ItProject[] {

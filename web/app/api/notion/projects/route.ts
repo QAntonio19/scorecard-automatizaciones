@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
 import type { ItProject } from "@/lib/itProjectTypes";
 import { mapNotionEstatusToPhase } from "@/lib/notionEstatusPhase";
+import {
+  notionQueryAllDatabaseRows,
+  notionRelationPropertyCandidates,
+  relationIdsFromCandidates,
+  resolveNotionRelatedPageTitles,
+} from "@/lib/notionRelations";
 import { resolveItProjectPmName } from "@/lib/notionProjectResponsable";
 
 export const revalidate = 0;
+
+type RowExtract = {
+  base: Omit<ItProject, "keyResults" | "plannedTasks" | "sprints" | "deliverables">;
+  keyResultIds: string[];
+  taskIds: string[];
+  sprintIds: string[];
+  deliverableIds: string[];
+};
 
 export async function GET() {
   const token = process.env.NOTION_API_KEY;
@@ -14,60 +28,92 @@ export async function GET() {
   }
 
   try {
-    const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({}),
-      cache: "no-store",
-    });
+    const results = await notionQueryAllDatabaseRows(dbId, token);
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("Notion API Error:", err);
-      return NextResponse.json({ error: "Failed to fetch from Notion" }, { status: res.status });
-    }
+    const krPropNames = notionRelationPropertyCandidates("keyResults");
+    const taskPropNames = notionRelationPropertyCandidates("tasks");
+    const sprintPropNames = notionRelationPropertyCandidates("sprints");
+    const deliverablePropNames = notionRelationPropertyCandidates("deliverables");
 
-    const data = await res.json();
-    
-    const projects: ItProject[] = data.results.map((r: unknown) => {
+    const extracted: RowExtract[] = results.map((r: unknown) => {
       const row = r as Record<string, unknown>;
       const props = row.properties as Record<string, unknown> | undefined;
       const archivar = props?.archivar as Record<string, unknown> | undefined;
       const isArchived = archivar?.checkbox === true;
-      
+
       const estatusProp = props?.Estatus as Record<string, unknown> | undefined;
-      const estatusValue = (estatusProp?.status as Record<string, unknown> | undefined)?.name as string | undefined;
+      const estatusValue = (estatusProp?.status as Record<string, unknown> | undefined)?.name as
+        | string
+        | undefined;
 
       const phase = mapNotionEstatusToPhase(estatusValue, isArchived);
 
       const nombre = props?.Nombre as Record<string, unknown> | undefined;
       const titleProp = nombre?.title as Array<Record<string, unknown>> | undefined;
-      const name = Array.isArray(titleProp) && titleProp.length > 0 && typeof titleProp[0].plain_text === "string"
-        ? titleProp[0].plain_text 
-        : "Proyecto sin nombre";
+      const name =
+        Array.isArray(titleProp) && titleProp.length > 0 && typeof titleProp[0].plain_text === "string"
+          ? titleProp[0].plain_text
+          : "Proyecto sin nombre";
       const id = row.id as string;
       const created_time = row.created_time as string | undefined;
       const pmName = resolveItProjectPmName(props, name);
 
+      const keyResultIds = relationIdsFromCandidates(props, krPropNames);
+      const taskIds = relationIdsFromCandidates(props, taskPropNames);
+      const sprintIds = relationIdsFromCandidates(props, sprintPropNames);
+      const deliverableIds = relationIdsFromCandidates(props, deliverablePropNames);
+
       return {
-        id,
-        code: `PRJ-${id.split("-")[0].toUpperCase()}`,
-        name,
-        description: "",
-        phase,
-        sponsor: "Notion Sync",
-        pmName,
-        startDate: created_time || new Date().toISOString(),
-        targetEndDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
-        riskLevel: "bajo",
-        urgencyLevel: "media",
-        milestones: []
-      } satisfies ItProject;
+        base: {
+          id,
+          code: `PRJ-${id.split("-")[0].toUpperCase()}`,
+          name,
+          description: "",
+          phase,
+          sponsor: "Notion Sync",
+          pmName,
+          startDate: created_time || new Date().toISOString(),
+          targetEndDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
+          riskLevel: "bajo",
+          urgencyLevel: "media",
+          milestones: [],
+        },
+        keyResultIds,
+        taskIds,
+        sprintIds,
+        deliverableIds,
+      };
     });
+
+    const relatedIdSet = new Set<string>();
+    for (const ex of extracted) {
+      for (const kid of ex.keyResultIds) relatedIdSet.add(kid);
+      for (const tid of ex.taskIds) relatedIdSet.add(tid);
+      for (const sid of ex.sprintIds) relatedIdSet.add(sid);
+      for (const did of ex.deliverableIds) relatedIdSet.add(did);
+    }
+
+    const titleById = await resolveNotionRelatedPageTitles([...relatedIdSet], token);
+
+    const projects: ItProject[] = extracted.map((ex) => ({
+      ...ex.base,
+      keyResults: ex.keyResultIds.map((pageId) => ({
+        id: pageId,
+        title: titleById.get(pageId) ?? "Sin título",
+      })),
+      plannedTasks: ex.taskIds.map((pageId) => ({
+        id: pageId,
+        title: titleById.get(pageId) ?? "Sin título",
+      })),
+      sprints: ex.sprintIds.map((pageId) => ({
+        id: pageId,
+        title: titleById.get(pageId) ?? "Sin título",
+      })),
+      deliverables: ex.deliverableIds.map((pageId) => ({
+        id: pageId,
+        title: titleById.get(pageId) ?? "Sin título",
+      })),
+    }));
 
     return NextResponse.json({ projects });
   } catch (error) {

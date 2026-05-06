@@ -17,6 +17,35 @@ export interface ItProjectMilestone {
   done: boolean;
 }
 
+/** Trabajo planificado asociado al alcance del proyecto */
+export interface ItProjectPlannedTask {
+  id: string;
+  title: string;
+}
+
+/** Key result vinculado al proyecto (objetivo medible / línea estratégica) */
+export interface ItProjectKeyResult {
+  id: string;
+  title: string;
+}
+
+/** Iteración corta dentro del plan del proyecto */
+export interface ItProjectSprint {
+  id: string;
+  /** Nombre corto del sprint */
+  title: string;
+  /** Período o ventana esperada (texto libre, p. ej. fechas ISO o rango breve) */
+  timeframe?: string;
+}
+
+/** Resultado tangible acordado con el sponsor o negocio */
+export interface ItProjectDeliverable {
+  id: string;
+  title: string;
+  /** Fecha objetivo o compromiso entrega */
+  targetDate?: string;
+}
+
 export interface ItProject {
   id: string;
   code: string;
@@ -31,4 +60,8 @@ export interface ItProject {
   urgencyLevel?: ItProjectUrgency;
 
   milestones: ItProjectMilestone[];
+  keyResults: ItProjectKeyResult[];
+  plannedTasks: ItProjectPlannedTask[];
+  sprints: ItProjectSprint[];
+  deliverables: ItProjectDeliverable[];
 }
