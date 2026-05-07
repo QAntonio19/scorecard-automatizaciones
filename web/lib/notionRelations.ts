@@ -91,7 +91,7 @@ export async function notionQueryAllDatabaseRows(
       method: "POST",
       headers: notionHeaders(token),
       body: JSON.stringify(body),
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) {
@@ -116,9 +116,9 @@ export async function notionQueryAllDatabaseRows(
   return out;
 }
 
-const TITLE_FETCH_CONCURRENCY = 8;
+const TITLE_FETCH_CONCURRENCY = 20;
 
-/** GET /v1/pages/:id y mapa id → título (una sola petición por id único). */
+/** GET /v1/pages/:id y mapa id → título — todas las peticiones en paralelo. */
 export async function resolveNotionRelatedPageTitles(
   pageIds: string[],
   token: string,
@@ -126,26 +126,30 @@ export async function resolveNotionRelatedPageTitles(
   const unique = [...new Set(pageIds.filter((id) => id.length > 0))];
   const map = new Map<string, string>();
 
-  for (let i = 0; i < unique.length; i += TITLE_FETCH_CONCURRENCY) {
-    const chunk = unique.slice(i, i + TITLE_FETCH_CONCURRENCY);
-    const settled = await Promise.all(
-      chunk.map(async (id) => {
-        try {
-          const res = await fetch(`https://api.notion.com/v1/pages/${id}`, {
-            headers: notionHeaders(token),
-            cache: "no-store",
-          });
-          if (!res.ok) {
-            return [id, "Sin título"] as const;
-          }
-          const page: unknown = await res.json();
-          return [id, titleFromNotionPagePayload(page)] as const;
-        } catch {
-          return [id, "Sin título"] as const;
-        }
-      }),
-    );
-    for (const [id, title] of settled) {
+  if (unique.length === 0) return map;
+
+  // Fire all requests in parallel with high concurrency
+  const allPromises = unique.map(async (id) => {
+    try {
+      const res = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+        headers: notionHeaders(token),
+        next: { revalidate: 300 },
+      });
+      if (!res.ok) {
+        return [id, "Sin título"] as const;
+      }
+      const page: unknown = await res.json();
+      return [id, titleFromNotionPagePayload(page)] as const;
+    } catch {
+      return [id, "Sin título"] as const;
+    }
+  });
+
+  // Process in chunks to avoid overwhelming Notion rate limits
+  for (let i = 0; i < allPromises.length; i += TITLE_FETCH_CONCURRENCY) {
+    const chunk = allPromises.slice(i, i + TITLE_FETCH_CONCURRENCY);
+    const results = await Promise.all(chunk);
+    for (const [id, title] of results) {
       map.set(id, title);
     }
   }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { IT_PROJECTS_SEED } from "@/data/it-projects.seed";
 import { IT_PROJECT_PHASE_ORDER } from "@/lib/itProjectPortfolio";
 import type { ItProject, ItProjectPhase } from "@/lib/itProjectTypes";
 
@@ -170,12 +169,85 @@ export function appendUserProject(project: ItProject): void {
   window.dispatchEvent(new CustomEvent(IT_PROJECTS_CHANGED_EVENT));
 }
 
-export function useMergedItProjects(): { projects: ItProject[]; ready: boolean; error?: string } {
+/**
+ * Module-level cache for Notion data — shared across all component instances.
+ * Prevents duplicate fetches when navigating between Panel ↔ Proyectos.
+ */
+const notionCache: {
+  data: ItProject[] | null;
+  error: string | undefined;
+  fetchedAt: number;
+  promise: Promise<void> | null;
+} = { data: null, error: undefined, fetchedAt: 0, promise: null };
+
+const CACHE_TTL_MS = 60_000; // 60s — matches server revalidate
+
+function fetchNotionIfNeeded(
+  onData: (d: ItProject[]) => void,
+  onError: (e: string) => void,
+  onDone: () => void,
+): void {
+  const now = Date.now();
+
+  // Return cached data immediately if fresh
+  if (notionCache.data && now - notionCache.fetchedAt < CACHE_TTL_MS) {
+    onData(notionCache.data);
+    onDone();
+    return;
+  }
+
+  // If a fetch is already in-flight, piggyback on it
+  if (notionCache.promise) {
+    notionCache.promise.then(() => {
+      if (notionCache.data) onData(notionCache.data);
+      if (notionCache.error) onError(notionCache.error);
+      onDone();
+    });
+    return;
+  }
+
+  // Start a new fetch
+  notionCache.promise = fetch("/api/notion/projects")
+    .then((res) => {
+      if (!res.ok) throw new Error("Error HTTP");
+      return res.json();
+    })
+    .then((data) => {
+      if (data.projects) {
+        notionCache.data = data.projects;
+        notionCache.error = undefined;
+        notionCache.fetchedAt = Date.now();
+        onData(data.projects);
+      } else if (data.error) {
+        notionCache.error = data.error;
+        onError(data.error);
+      }
+    })
+    .catch((err) => {
+      console.error("Error fetching Notion projects:", err);
+      const msg = "Error fetching Notion projects";
+      notionCache.error = msg;
+      onError(msg);
+    })
+    .finally(() => {
+      notionCache.promise = null;
+      onDone();
+    });
+}
+
+export function useMergedItProjects(): {
+  projects: ItProject[];
+  loading: boolean;
+  ready: boolean;
+  error?: string;
+} {
   const [mounted, setMounted] = useState(false);
-  const [fetching, setFetching] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<ItProject[]>([]);
-  const [notionData, setNotionData] = useState<ItProject[]>(IT_PROJECTS_SEED);
-  const [error, setError] = useState<string>();
+  const [notionData, setNotionData] = useState<ItProject[]>(
+    () => notionCache.data ?? [],
+  );
+  const [error, setError] = useState<string | undefined>(notionCache.error);
 
   useEffect(() => {
     setMounted(true);
@@ -184,27 +256,12 @@ export function useMergedItProjects(): { projects: ItProject[]; ready: boolean; 
     };
     sync();
     window.addEventListener(IT_PROJECTS_CHANGED_EVENT, sync);
-    
-    // Fetch from Notion API
-    fetch("/api/notion/projects")
-      .then(res => {
-        if (!res.ok) throw new Error("Error HTTP");
-        return res.json();
-      })
-      .then(data => {
-        if (data.projects) {
-          setNotionData(data.projects);
-        } else if (data.error) {
-          setError(data.error);
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching Notion projects:", err);
-        setError("Error fetching Notion projects");
-      })
-      .finally(() => {
-        setFetching(false);
-      });
+
+    fetchNotionIfNeeded(
+      (d) => { setNotionData(d); setLoading(false); },
+      (e) => { setError(e); setLoading(false); },
+      () => { setLoading(false); },
+    );
 
     return () => {
       window.removeEventListener(IT_PROJECTS_CHANGED_EVENT, sync);
@@ -212,8 +269,9 @@ export function useMergedItProjects(): { projects: ItProject[]; ready: boolean; 
   }, []);
 
   const projects = useMemo(() => {
+    if (notionData.length === 0 && user.length === 0) return [];
     return mergeItProjectsWithSeed(notionData, user);
   }, [notionData, user]);
 
-  return { projects, ready: mounted && !fetching, error };
+  return { projects, loading, ready: mounted && !loading, error };
 }

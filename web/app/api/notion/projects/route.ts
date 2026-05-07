@@ -9,7 +9,8 @@ import {
 } from "@/lib/notionRelations";
 import { resolveItProjectPmName } from "@/lib/notionProjectResponsable";
 
-export const revalidate = 0;
+/** Cache Notion response for 60s — avoids hammering Notion API on every navigation. */
+export const revalidate = 60;
 
 type RowExtract = {
   base: Omit<ItProject, "keyResults" | "plannedTasks" | "sprints" | "deliverables">;

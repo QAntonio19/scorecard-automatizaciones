@@ -8,6 +8,24 @@ import {
   urgencyBadgeClass,
 } from "@/lib/itProjectPortfolio";
 
+const MONTHS = [
+  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
+];
+
+function formatMonthYear(dateStr: string | undefined): string {
+  if (!dateStr || dateStr === "—") return "—";
+  const parts = dateStr.split("T")[0].split("-");
+  if (parts.length >= 2) {
+    const year = parts[0];
+    const month = parseInt(parts[1], 10);
+    if (month >= 1 && month <= 12) {
+      return `${MONTHS[month - 1]} ${year}`;
+    }
+  }
+  return dateStr;
+}
+
 function ItRiskDot({ risk }: { risk: ItProjectRisk }) {
   const cls =
     risk === "alto"
@@ -62,13 +80,14 @@ export function ItProjectCard({ project: p, phaseBorderOnCard }: Props) {
           style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
         />
       </div>
+
       <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
         <span className="font-semibold text-slate-600">
           {p.milestones.length} {p.milestones.length === 1 ? "paso" : "pasos"}
         </span>
         <span className="text-slate-300">·</span>
         <span>
-          {p.startDate} → {p.targetEndDate}
+          {formatMonthYear(p.startDate)} → {formatMonthYear(p.targetEndDate)}
         </span>
       </div>
 
@@ -88,21 +107,11 @@ export function ItProjectCard({ project: p, phaseBorderOnCard }: Props) {
             {urgencyLabel(p.urgencyLevel)}
           </span>
         ) : null}
-        <span className="text-slate-300">·</span>
-        <span className="truncate text-[11px] text-slate-600">{p.sponsor}</span>
-        <span className="text-slate-300">·</span>
-        <span className="text-[11px] text-slate-600">Tasa fallo: —</span>
-        <span className="ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ring-inset text-sky-800 ring-sky-200 bg-sky-50">
-          Ver →
-        </span>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <div className="mt-3 flex items-center justify-end gap-2">
         <span className="inline-flex max-w-[min(100%,12rem)] items-center truncate rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-bold text-slate-800 ring-1 ring-slate-200">
           {p.pmName}
-        </span>
-        <span className="shrink-0 rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 ring-1 ring-slate-200">
-          {p.code}
         </span>
       </div>
     </Link>
