@@ -9,8 +9,8 @@ import {
 } from "@/lib/notionRelations";
 import { resolveItProjectPmName } from "@/lib/notionProjectResponsable";
 
-/** Cache Notion response for 60s — avoids hammering Notion API on every navigation. */
-export const revalidate = 60;
+/** Cache Notion response for 0s — avoids hammering Notion API but ensures fresh data for debug. */
+export const revalidate = 0;
 
 type RowExtract = {
   base: Omit<ItProject, "keyResults" | "plannedTasks" | "sprints" | "deliverables">;
@@ -39,6 +39,7 @@ export async function GET() {
     const extracted: RowExtract[] = results.map((r: unknown) => {
       const row = r as Record<string, unknown>;
       const props = row.properties as Record<string, unknown> | undefined;
+
       const archivar = props?.archivar as Record<string, unknown> | undefined;
       const isArchived = archivar?.checkbox === true;
 
@@ -59,6 +60,47 @@ export async function GET() {
       const created_time = row.created_time as string | undefined;
       const pmName = resolveItProjectPmName(props, name);
 
+      // Extracción ultra-robusta de valores de Notion
+      const getVal = (p: any) => {
+        if (!p) return undefined;
+        if (p.select) return p.select.name;
+        if (p.status) return p.status.name;
+        if (p.multi_select?.[0]) return p.multi_select[0].name;
+        if (p.formula) return p.formula.string || p.formula.number?.toString();
+        if (p.rich_text?.[0]) return p.rich_text[0].plain_text;
+        if (p.rollup) {
+          const r = p.rollup;
+          if (r.type === "array" && r.array?.[0]) {
+            const first = r.array[0];
+            return (
+              first.select?.name ||
+              first.status?.name ||
+              first.multi_select?.[0]?.name ||
+              first.rich_text?.[0]?.plain_text ||
+              first.title?.[0]?.plain_text
+            );
+          }
+          return r.string || r.number?.toString();
+        }
+        return undefined;
+      };
+
+      // Nivel de riesgo
+      const riskProp = props?.["Nivel de riesgo"] || props?.["Nivel de Riesgo"];
+      const riskName = getVal(riskProp);
+      const riskLevel: ItProject["riskLevel"] =
+        riskName === "Alta" ? "alto" :
+        riskName === "Media" ? "medio" : "bajo";
+
+      // Nivel de Urgencia
+      const urgencyProp = props?.["Nivel de Urgencia"] || props?.["Urgencia"];
+      const urgencyName = getVal(urgencyProp);
+      const urgencyLevel: ItProject["urgencyLevel"] =
+        urgencyName === "Alta" ? "alta" :
+        urgencyName === "Baja" ? "baja" : "media";
+
+      console.log(`DEBUG_NOTION_VALS: [${name}] -> RiskName: "${riskName}", UrgencyName: "${urgencyName}"`);
+
       const keyResultIds = relationIdsFromCandidates(props, krPropNames);
       const taskIds = relationIdsFromCandidates(props, taskPropNames);
       const sprintIds = relationIdsFromCandidates(props, sprintPropNames);
@@ -75,8 +117,8 @@ export async function GET() {
           pmName,
           startDate: created_time || new Date().toISOString(),
           targetEndDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
-          riskLevel: "bajo",
-          urgencyLevel: "media",
+          riskLevel,
+          urgencyLevel,
           milestones: [],
         },
         keyResultIds,

@@ -26,18 +26,26 @@ function formatMonthYear(dateStr: string | undefined): string {
   return dateStr;
 }
 
-function ItRiskDot({ risk }: { risk: ItProjectRisk }) {
-  const cls =
-    risk === "alto"
-      ? "bg-rose-500"
-      : risk === "medio"
-        ? "bg-amber-400"
-        : "bg-emerald-500";
+function UrgencyIcon({ urgency }: { urgency: ItProject["urgencyLevel"] }) {
+  if (urgency === "alta") {
+    return (
+      <svg className="h-5 w-5 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m17 11-5-5-5 5M17 18l-5-5-5 5"/>
+      </svg>
+    );
+  }
+  if (urgency === "media") {
+    return (
+      <svg className="h-5 w-5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m13 17 5-5-5-5M6 17l5-5-5-5"/>
+      </svg>
+    );
+  }
+  // baja or fallback
   return (
-    <span
-      className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white shadow-sm ${cls}`}
-      title={riskLabel(risk)}
-    />
+    <svg className="h-5 w-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m7 13 5 5 5-5M7 6l5 5 5-5"/>
+    </svg>
   );
 }
 
@@ -71,7 +79,7 @@ export function ItProjectCard({ project: p, phaseBorderOnCard }: Props) {
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-bold text-slate-900">{p.name}</h3>
-        <ItRiskDot risk={p.riskLevel} />
+        <UrgencyIcon urgency={p.urgencyLevel} />
       </div>
       <p className="mt-2 line-clamp-2 text-xs text-slate-600">{p.description}</p>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -91,23 +99,13 @@ export function ItProjectCard({ project: p, phaseBorderOnCard }: Props) {
         </span>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-        {phaseBorderOnCard ? (
-          <>
-            <span className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200">
-              {phaseLabel(p.phase)}
-            </span>
-            <span className="text-[11px] text-slate-600">{riskLabel(p.riskLevel)}</span>
-          </>
-        ) : (
-          <span className="text-[11px] text-slate-600">{riskLabel(p.riskLevel)}</span>
-        )}
-        {p.urgencyLevel ? (
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset ${urgencyBadgeClass(p.urgencyLevel)}`}>
-            {urgencyLabel(p.urgencyLevel)}
+      {phaseBorderOnCard && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+          <span className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200">
+            {phaseLabel(p.phase)}
           </span>
-        ) : null}
-      </div>
+        </div>
+      )}
 
       <div className="mt-3 flex items-center justify-end gap-2">
         <span className="inline-flex max-w-[min(100%,12rem)] items-center truncate rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-bold text-slate-800 ring-1 ring-slate-200">

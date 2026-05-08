@@ -14,6 +14,27 @@ function riskBarClass(risk: "bajo" | "medio" | "alto"): string {
   return "border-l-4 border-l-emerald-500";
 }
 
+function phaseBadgeClass(phase: ItProject["phase"]): string {
+  const map: Record<ItProject["phase"], string> = {
+    backlog: "bg-slate-100 text-slate-700 ring-slate-200",
+    sin_empezar: "bg-slate-100 text-slate-700 ring-slate-200",
+    planificacion: "bg-amber-100 text-amber-800 ring-amber-200",
+    ejecucion: "bg-sky-100 text-sky-800 ring-sky-200",
+    cierre: "bg-emerald-100 text-emerald-800 ring-emerald-200",
+    archivado: "bg-slate-200 text-slate-700 ring-slate-300",
+  };
+  return map[phase];
+}
+
+function riskBadgeClass(risk: ItProject["riskLevel"]): string {
+  const map: Record<ItProject["riskLevel"], string> = {
+    bajo: "bg-blue-100 text-blue-800 ring-blue-200",
+    medio: "bg-amber-100 text-amber-800 ring-amber-200",
+    alto: "bg-red-100 text-red-800 ring-red-200",
+  };
+  return map[risk];
+}
+
 function DetailSkeleton() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -49,45 +70,63 @@ function ItProjectDetailBody({ p }: { p: ItProject }) {
           p.riskLevel,
         )}`}
       >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="font-mono text-xs font-bold text-indigo-700">{p.code}</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{p.name}</h1>
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="flex-1 min-w-[280px]">
+            <div className="flex items-center gap-3">
+              <p className="font-mono text-xs font-bold text-indigo-700">{p.code}</p>
+              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${phaseBadgeClass(p.phase)}`}>
+                {phaseLabel(p.phase)}
+              </span>
+            </div>
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{p.name}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">{p.description}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-800 ring-1 ring-slate-200">
-              {phaseLabel(p.phase)}
-            </span>
-            <span className="inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-white">
-              Riesgo: {riskLabel(p.riskLevel)}
-            </span>
-            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset ${urgencyBadgeClass(p.urgencyLevel)}`}>
-              Urgencia: {urgencyLabel(p.urgencyLevel)}
-            </span>
+          <div className="flex flex-col items-end gap-3 shrink-0">
+            <div className="flex flex-wrap justify-end gap-2">
+              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset ${riskBadgeClass(p.riskLevel)}`}>
+                Riesgo: {riskLabel(p.riskLevel)}
+              </span>
+              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset ${urgencyBadgeClass(p.urgencyLevel)}`}>
+                Urgencia: {urgencyLabel(p.urgencyLevel)}
+              </span>
+            </div>
+            <a
+              href={`https://notion.so/${p.id.replace(/-/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 transition-all hover:bg-slate-50 hover:text-indigo-600 hover:ring-indigo-200 hover:shadow"
+              title="Abrir proyecto en Notion"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+              Abrir en Notion
+            </a>
           </div>
         </div>
       </header>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Gobierno</h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Generalidades</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">Sponsor</dt>
-              <dd className="font-medium text-slate-900">{p.sponsor}</dd>
-            </div>
-            <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">Project manager</dt>
+              <dt className="text-slate-500">Responsable</dt>
               <dd className="font-medium text-slate-900">{p.pmName}</dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
               <dt className="text-slate-500">Inicio</dt>
-              <dd className="tabular-nums font-medium text-slate-900">{p.startDate}</dd>
+              <dd className="font-medium text-slate-900 capitalize">
+                {new Date(p.startDate).toLocaleDateString("es-MX", { month: "long" }).replace(/^./, c => c.toUpperCase()) + " " + new Date(p.startDate).getFullYear()}
+              </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-slate-500">Fin objetivo</dt>
-              <dd className="tabular-nums font-medium text-slate-900">{p.targetEndDate}</dd>
+              <dd className="font-medium text-slate-900 capitalize">
+                {new Date(p.targetEndDate).toLocaleDateString("es-MX", { month: "long" }).replace(/^./, c => c.toUpperCase()) + " " + new Date(p.startDate).getFullYear()}
+              </dd>
             </div>
           </dl>
         </section>

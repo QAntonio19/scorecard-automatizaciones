@@ -72,37 +72,6 @@ export function PanelMetricStrip({ projects }: { projects: ItProject[] }) {
           accent="emerald"
         />
       </div>
-
-      {/* Mini barra distribución por fase */}
-      {byPhase.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {byPhase.map(({ phase, label, count }) => {
-            const colorMap: Record<string, string> = {
-              backlog: "bg-slate-500",
-              sin_empezar: "bg-slate-400",
-              planificacion: "bg-amber-400",
-              ejecucion: "bg-sky-500",
-              cierre: "bg-emerald-500",
-              archivado: "bg-slate-300",
-            };
-            return (
-              <span
-                key={phase}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm"
-              >
-                <span className={`inline-block h-2 w-2 rounded-full ${colorMap[phase] ?? "bg-slate-400"}`} />
-                {label}: {count}
-              </span>
-            );
-          })}
-          {urgenciaAlta > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-800">
-              <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
-              Urgencia alta: {urgenciaAlta}
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }
