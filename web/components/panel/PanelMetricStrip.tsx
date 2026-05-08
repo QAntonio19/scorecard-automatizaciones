@@ -1,5 +1,4 @@
 import type { ItProject } from "@/lib/itProjectTypes";
-import { IT_PROJECT_PHASE_ORDER, phaseLabel } from "@/lib/itProjectPortfolio";
 
 function MetricCard({
   label,

@@ -63,17 +63,31 @@ export async function GET() {
       // Extracción ultra-robusta de valores de Notion
       const getVal = (p: unknown) => {
         if (!p || typeof p !== "object") return undefined;
-        const obj = p as Record<string, any>;
-        if (obj.select) return obj.select.name;
-        if (obj.status) return obj.status.name;
-        if (obj.multi_select?.[0]) return obj.multi_select[0].name;
-        if (obj.formula) {
-          const f = obj.formula;
-          return f.string || f.number?.toString();
-        }
-        if (obj.rich_text?.[0]) return obj.rich_text[0].plain_text;
+        const obj = p as Record<string, unknown>;
+        
+        // select
+        const sel = obj.select as { name: string } | undefined;
+        if (sel?.name) return sel.name;
+        
+        // status
+        const st = obj.status as { name: string } | undefined;
+        if (st?.name) return st.name;
+        
+        // multi_select
+        const ms = obj.multi_select as Array<{ name: string }> | undefined;
+        if (ms?.[0]?.name) return ms[0].name;
+        
+        // formula
+        const f = obj.formula as { string?: string; number?: number } | undefined;
+        if (f) return f.string || f.number?.toString();
+        
+        // rich_text
+        const rt = obj.rich_text as Array<{ plain_text: string }> | undefined;
+        if (rt?.[0]?.plain_text) return rt[0].plain_text;
+        
+        // rollup
         if (obj.rollup) {
-          const r = obj.rollup;
+          const r = obj.rollup as { type: string; array?: unknown[]; string?: string; number?: number };
           if (r.type === "array" && r.array?.[0]) {
             const first = r.array[0];
             return (
