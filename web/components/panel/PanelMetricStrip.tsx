@@ -48,16 +48,8 @@ export function PanelMetricStrip({ projects }: { projects: ItProject[] }) {
   const total = projects.length;
   const enEjecucion = projects.filter((p) => p.phase === "ejecucion").length;
   const altoRiesgo = projects.filter((p) => p.riskLevel === "alto").length;
-  const urgenciaAlta = projects.filter((p) => p.urgencyLevel === "alta").length;
   const { done, total: mTotal } = milestoneProgress(projects);
   const pctHitos = mTotal === 0 ? 0 : Math.round((done / mTotal) * 100);
-
-  // Distribución por fase
-  const byPhase = IT_PROJECT_PHASE_ORDER.map((ph) => ({
-    phase: ph,
-    label: phaseLabel(ph),
-    count: projects.filter((p) => p.phase === ph).length,
-  })).filter((x) => x.count > 0);
 
   return (
     <div className="space-y-4">

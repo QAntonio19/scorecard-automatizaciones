@@ -3,9 +3,6 @@ import type { ItProject, ItProjectRisk } from "@/lib/itProjectTypes";
 import {
   itPhaseTopBorderClass,
   phaseLabel,
-  riskLabel,
-  urgencyLabel,
-  urgencyBadgeClass,
 } from "@/lib/itProjectPortfolio";
 
 const MONTHS = [

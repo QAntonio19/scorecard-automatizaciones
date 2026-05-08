@@ -61,15 +61,19 @@ export async function GET() {
       const pmName = resolveItProjectPmName(props, name);
 
       // Extracción ultra-robusta de valores de Notion
-      const getVal = (p: any) => {
-        if (!p) return undefined;
-        if (p.select) return p.select.name;
-        if (p.status) return p.status.name;
-        if (p.multi_select?.[0]) return p.multi_select[0].name;
-        if (p.formula) return p.formula.string || p.formula.number?.toString();
-        if (p.rich_text?.[0]) return p.rich_text[0].plain_text;
-        if (p.rollup) {
-          const r = p.rollup;
+      const getVal = (p: unknown) => {
+        if (!p || typeof p !== "object") return undefined;
+        const obj = p as Record<string, any>;
+        if (obj.select) return obj.select.name;
+        if (obj.status) return obj.status.name;
+        if (obj.multi_select?.[0]) return obj.multi_select[0].name;
+        if (obj.formula) {
+          const f = obj.formula;
+          return f.string || f.number?.toString();
+        }
+        if (obj.rich_text?.[0]) return obj.rich_text[0].plain_text;
+        if (obj.rollup) {
+          const r = obj.rollup;
           if (r.type === "array" && r.array?.[0]) {
             const first = r.array[0];
             return (
