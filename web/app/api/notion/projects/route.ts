@@ -87,7 +87,18 @@ export async function GET() {
         
         // rollup
         if (obj.rollup) {
-          const r = obj.rollup as { type: string; array?: unknown[]; string?: string; number?: number };
+          const r = obj.rollup as {
+            type: string;
+            array?: Array<{
+              select?: { name: string };
+              status?: { name: string };
+              multi_select?: Array<{ name: string }>;
+              rich_text?: Array<{ plain_text: string }>;
+              title?: Array<{ plain_text: string }>;
+            }>;
+            string?: string;
+            number?: number;
+          };
           if (r.type === "array" && r.array?.[0]) {
             const first = r.array[0];
             return (
