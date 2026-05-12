@@ -6,21 +6,26 @@ import { useMemo } from "react";
 import { useCanEdit } from "@/hooks/useCanEdit";
 import { ItProjectsFilters } from "@/components/it-projects/ItProjectsFilters";
 import { ItProjectsKanbanBoard } from "@/components/it-projects/ItProjectsKanbanBoard";
-import { ItProjectsTable } from "@/components/it-projects/ItProjectsTable";
-import { ItProjectsToolbar } from "@/components/it-projects/ItProjectsToolbar";
 import {
   filterItProjects,
   IT_PROJECT_PHASE_ORDER,
   phaseLabel,
 } from "@/lib/itProjectPortfolio";
 import { useMergedItProjects } from "@/lib/itProjectsLocalStore";
-import { parseVistaProyectosIt } from "@/lib/itProjectsUrl";
 import type { ItProjectPhase } from "@/lib/itProjectTypes";
 
 function parsePhase(raw: string | null): ItProjectPhase | "" {
   if (!raw) return "";
   return IT_PROJECT_PHASE_ORDER.includes(raw as ItProjectPhase) ? (raw as ItProjectPhase) : "";
 }
+
+/** Fases intermedias cuando el filtro es «Todas» (sin backlog/archivado hasta `bk`/`ar`). */
+const KANBAN_MIDDLE_PHASES: readonly ItProjectPhase[] = [
+  "sin_empezar",
+  "planificacion",
+  "ejecucion",
+  "cierre",
+];
 
 function PortfolioSkeleton() {
   return (
@@ -77,12 +82,36 @@ export function ProyectosPortfolioContent() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
   const fase = parsePhase(searchParams.get("fase"));
-  const vista = parseVistaProyectosIt(searchParams.get("vista") ?? undefined);
+  const extraBk = searchParams.get("bk") === "1";
+  const extraAr = searchParams.get("ar") === "1";
 
   const { projects: all, loading, ready, error: notionFetchError } = useMergedItProjects();
 
-  const filtered = useMemo(() => filterItProjects(all, { q, phase: fase }), [all, q, fase]);
-  const inExecution = useMemo(() => all.filter((p) => p.phase === "ejecucion").length, [all]);
+  const displayProjects = useMemo(() => {
+    if (fase !== "") return filterItProjects(all, { q, phase: fase });
+    let out = filterItProjects(all, { q });
+    if (!extraBk) out = out.filter((p) => p.phase !== "backlog");
+    if (!extraAr) out = out.filter((p) => p.phase !== "archivado");
+    return out;
+  }, [all, q, fase, extraBk, extraAr]);
+
+  const kanbanColumnPhases = useMemo((): readonly ItProjectPhase[] => {
+    if (fase !== "") return [fase];
+    const cols: ItProjectPhase[] = [];
+    if (extraBk) cols.push("backlog");
+    cols.push(...KANBAN_MIDDLE_PHASES);
+    if (extraAr) cols.push("archivado");
+    return cols;
+  }, [fase, extraBk, extraAr]);
+
+  const activeInPortfolio = useMemo(
+    () => all.filter((p) => p.phase !== "backlog" && p.phase !== "archivado"),
+    [all],
+  );
+
+  const inExecution = useMemo(() => activeInPortfolio.filter((p) => p.phase === "ejecucion").length, [
+    activeInPortfolio,
+  ]);
 
   if (!ready && loading) {
     return <PortfolioSkeleton />;
@@ -123,7 +152,9 @@ export function ProyectosPortfolioContent() {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">En cartera</p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{all.length}</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+                {activeInPortfolio.length}
+              </p>
               <p className="mt-1 text-xs text-slate-500">proyectos activos</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -135,25 +166,19 @@ export function ProyectosPortfolioContent() {
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Resultado filtro</p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{filtered.length}</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{displayProjects.length}</p>
               <p className="mt-1 text-xs text-slate-500">coinciden con búsqueda / fase</p>
             </div>
           </div>
 
           <ItProjectsFilters />
 
-          <ItProjectsToolbar />
-
           <p className="text-sm font-medium text-slate-600">
-            Mostrando <span className="font-bold text-slate-900">{filtered.length}</span>{" "}
-            {filtered.length === 1 ? "proyecto" : "proyectos"}
+            Mostrando <span className="font-bold text-slate-900">{displayProjects.length}</span>{" "}
+            {displayProjects.length === 1 ? "proyecto" : "proyectos"}
           </p>
 
-          {vista === "tabla" ? (
-            <ItProjectsTable projects={filtered} />
-          ) : (
-            <ItProjectsKanbanBoard projects={filtered} />
-          )}
+          <ItProjectsKanbanBoard projects={displayProjects} columnPhases={kanbanColumnPhases} />
         </>
       ) : null}
     </div>

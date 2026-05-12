@@ -2,7 +2,6 @@
 
 import { ItProjectCard } from "@/components/it-projects/ItProjectCard";
 import {
-  IT_PROJECT_PHASE_ORDER,
   itPhaseTopBorderClass,
   phaseLabel,
 } from "@/lib/itProjectPortfolio";
@@ -50,9 +49,13 @@ function KanbanColumn({
   );
 }
 
-type Props = { projects: ItProject[] };
+export type ItProjectsKanbanBoardProps = {
+  projects: ItProject[];
+  /** Orden izquierda → derecha; el padre construye columna Backlog/Archivo sólo si aplican. */
+  columnPhases: readonly ItProjectPhase[];
+};
 
-export function ItProjectsKanbanBoard({ projects }: Props) {
+export function ItProjectsKanbanBoard({ projects, columnPhases }: ItProjectsKanbanBoardProps) {
   if (projects.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-600">
@@ -61,13 +64,15 @@ export function ItProjectsKanbanBoard({ projects }: Props) {
     );
   }
 
-  const visiblePhases = IT_PROJECT_PHASE_ORDER.filter(
-    (phase) => phase !== "backlog" && phase !== "archivado"
-  );
-
+  /** `auto-fit` contrae huecos sin tarjetas; `auto-fill` deja ranuras vacías (espacio lateral «fantasma»). */
   return (
-    <div className="grid min-h-0 grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
-      {visiblePhases.map((phase) => (
+    <div
+      className="grid min-h-0 items-stretch gap-5"
+      style={{
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 15rem), 1fr))",
+      }}
+    >
+      {columnPhases.map((phase) => (
         <KanbanColumn key={phase} phase={phase} projects={projects} />
       ))}
     </div>

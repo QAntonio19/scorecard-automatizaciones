@@ -16,3 +16,83 @@
     @apply min-h-full bg-slate-50 font-sans text-slate-900 antialiased;
   }
 }
+
+/** Calendario embebido en `FormStyledDateField`: la tabla por defecto supera paneles angostos (~294px). */
+@layer components {
+  .it-datepicker-popover {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    /* Nav + caption coherentes dentro del mismo ancho */
+    --rdp-nav_button-height: 2.25rem;
+    --rdp-nav_button-width: 2.25rem;
+    --rdp-nav-height: 2.5rem;
+  }
+
+  .it-datepicker-popover .rdp-root {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .it-datepicker-popover .rdp-month {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .it-datepicker-popover .rdp-months {
+    max-width: 100%;
+  }
+
+  .it-datepicker-popover table.rdp-month_grid {
+    width: 100% !important;
+    max-width: 100%;
+    table-layout: fixed !important;
+    box-sizing: border-box;
+    border-collapse: collapse;
+  }
+
+  .it-datepicker-popover thead .rdp-weekday {
+    padding: 0.2rem 0 !important;
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    text-align: center;
+  }
+
+  .it-datepicker-popover .rdp-day {
+    box-sizing: border-box;
+    width: 14.28% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    padding: 3px !important;
+    vertical-align: middle !important;
+  }
+
+  .it-datepicker-popover .rdp-day_button {
+    width: 100% !important;
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 auto;
+    padding: 0 !important;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+    box-sizing: border-box;
+    border-radius: var(--rdp-day_button-border-radius, 0.625rem) !important;
+  }
+
+  .it-datepicker-popover .rdp-day.rdp-selected {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+  }
+
+  .it-datepicker-popover .rdp-today:not(.rdp-outside) .rdp-day_button {
+    font-weight: 600;
+  }
+}

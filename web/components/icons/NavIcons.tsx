@@ -57,6 +57,28 @@ export function IconMenu({ className }: { className?: string }) {
   );
 }
 
+/** Personas / responsables IT */
+export function IconUsers({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="9" cy="7" r="3.25" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M4 21a8 8 0 0 1 13.6-5.66M18 21a8 8 0 0 0-13.55-6"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+      <circle cx="17" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M21 21a7 7 0 0 0-6.94-8"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function IconDownload({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>

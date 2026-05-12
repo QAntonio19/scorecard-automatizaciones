@@ -5,8 +5,6 @@ import { PanelAttentionList } from "@/components/panel/PanelAttentionList";
 import { PanelMetricStrip } from "@/components/panel/PanelMetricStrip";
 import { PanelRiskMatrix } from "@/components/panel/PanelRiskMatrix";
 import { useMergedItProjects } from "@/lib/itProjectsLocalStore";
-import { ItProjectCard } from "@/components/it-projects/ItProjectCard";
-import { itPhaseTopBorderClass } from "@/lib/itProjectPortfolio";
 
 function PanelSkeleton() {
   return (
@@ -77,9 +75,6 @@ export function PanelPageContent() {
       .slice(0, 5);
   }, [projects]);
 
-  const backlogProjects = useMemo(() => projects.filter((p) => p.phase === "backlog"), [projects]);
-  const archivedProjects = useMemo(() => projects.filter((p) => p.phase === "archivado"), [projects]);
-
   if (loading && !ready) return <PanelSkeleton />;
   if (error) return <PanelError message={error} />;
 
@@ -126,53 +121,6 @@ export function PanelPageContent() {
                 ))}
               </ul>
             </section>
-          )}
-
-          {/* Backlog & Archivados */}
-          {(backlogProjects.length > 0 || archivedProjects.length > 0) ? (
-            <div className="grid gap-6 sm:grid-cols-2">
-              {/* Backlog */}
-              {backlogProjects.length > 0 ? (
-                <section className={`flex min-h-0 max-h-[30rem] flex-col rounded-xl border border-slate-200 bg-white shadow-sm ${itPhaseTopBorderClass("backlog")} border-t-4`}>
-                  <header className="shrink-0 border-b border-slate-100 px-4 py-3">
-                    <h2 className="text-sm font-bold text-slate-900">
-                      Backlog{" "}
-                      <span className="font-semibold text-slate-500">
-                        / {backlogProjects.length}
-                      </span>
-                    </h2>
-                  </header>
-                  <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto overscroll-contain p-3 [-webkit-overflow-scrolling:touch]">
-                    {backlogProjects.map((p) => (
-                      <ItProjectCard key={p.id} project={p} phaseBorderOnCard={false} />
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              {/* Archivados */}
-              {archivedProjects.length > 0 ? (
-                <section className={`flex min-h-0 max-h-[30rem] flex-col rounded-xl border border-slate-200 bg-white shadow-sm ${itPhaseTopBorderClass("archivado")} border-t-4`}>
-                  <header className="shrink-0 border-b border-slate-100 px-4 py-3">
-                    <h2 className="text-sm font-bold text-slate-900">
-                      Archivado{" "}
-                      <span className="font-semibold text-slate-500">
-                        / {archivedProjects.length}
-                      </span>
-                    </h2>
-                  </header>
-                  <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto overscroll-contain p-3 [-webkit-overflow-scrolling:touch]">
-                    {archivedProjects.map((p) => (
-                      <ItProjectCard key={p.id} project={p} phaseBorderOnCard={false} />
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
-              No hay proyectos en backlog ni archivados
-            </div>
           )}
         </div>
       </div>

@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { useMemo } from "react";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
-import { useMergedItProjects } from "@/lib/itProjectsLocalStore";
+import { useCanEdit } from "@/hooks/useCanEdit";
+import {
+  invalidateNotionProjectsCache,
+  removeUserProject,
+  useMergedItProjects,
+} from "@/lib/itProjectsLocalStore";
+import { isLikelyNotionPageId } from "@/lib/notionProjectFromPage";
 import { phaseLabel, riskLabel, urgencyLabel, urgencyBadgeClass } from "@/lib/itProjectPortfolio";
 import type { ItProject } from "@/lib/itProjectTypes";
 
@@ -48,13 +54,212 @@ function DetailSkeleton() {
   );
 }
 
-function ItProjectDetailBody({ p }: { p: ItProject }) {
+function ItProjectDeleteActions({ project }: { project: ItProject }) {
+  const canEdit = useCanEdit();
+  const router = useRouter();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
+  const [pending, setPending] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const isNotion = isLikelyNotionPageId(project.id);
+  const nameMatches = confirmName === project.name;
+
+  useEffect(() => {
+    if (!modalOpen) setConfirmName("");
+  }, [modalOpen]);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setModalOpen(false);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [modalOpen]);
+
+  const runDelete = async () => {
+    if (!nameMatches || pending) return;
+    setFeedback(null);
+    setPending(true);
+    try {
+      if (isNotion) {
+        const res = await fetch(`/api/notion/projects/${encodeURIComponent(project.id)}`, {
+          method: "DELETE",
+          cache: "no-store",
+        });
+        let data: unknown = null;
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+        if (!res.ok) {
+          const msg =
+            typeof data === "object" &&
+            data !== null &&
+            "error" in data &&
+            typeof (data as { error: unknown }).error === "string"
+              ? (data as { error: string }).error
+              : "No se pudo eliminar el proyecto en Notion.";
+          throw new Error(msg);
+        }
+        removeUserProject(project.id);
+      } else {
+        removeUserProject(project.id);
+      }
+      invalidateNotionProjectsCache();
+      setModalOpen(false);
+      router.push("/proyectos");
+    } catch (e) {
+      setFeedback(e instanceof Error ? e.message : "No se pudo completar la operación.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  if (canEdit === null || canEdit === false) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="mt-12 rounded-xl border border-rose-100 bg-rose-50/40 px-5 py-4">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-rose-800/80">Zona de riesgo</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          {isNotion ? (
+            <>
+              Al confirmar se quita del portafolio y Notion mueve la página a la{" "}
+              <strong className="font-semibold text-slate-800">papelera</strong>. La API pública de Notion no ofrece borrado
+              definitivo automático: para eliminarla por completo hay que vaciar la papelera (o borrar la página) desde la
+              aplicación o web de Notion.
+            </>
+          ) : (
+            "Es un borrado permanente en este navegador: se eliminan los datos guardados aquí."
+          )}
+        </p>
+        {feedback && !modalOpen ? (
+          <p className="mt-2 text-sm text-rose-700" role="alert">
+            {feedback}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            setFeedback(null);
+            setModalOpen(true);
+          }}
+          className="mt-3 rounded-lg border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-800 shadow-sm transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending ? "Procesando…" : isNotion ? "Eliminar proyecto (papelera en Notion)" : "Eliminar del navegador"}
+        </button>
+      </div>
+
+      {modalOpen ? (
+        <div className="fixed inset-0 z-[120] flex items-end justify-center p-4 sm:items-center sm:p-6">
+          <button
+            type="button"
+            aria-label="Cerrar sin eliminar"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+            onClick={() => {
+              setModalOpen(false);
+              setFeedback(null);
+            }}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-project-modal-title"
+            className="relative w-full max-w-md rounded-2xl border border-rose-200 bg-white shadow-2xl"
+          >
+            <div className="border-b border-rose-100 px-5 py-4">
+              <h2 id="delete-project-modal-title" className="text-lg font-bold text-rose-900">
+                ¿Eliminar este proyecto?
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                {isNotion
+                  ? "El proyecto pasará a la papelera en Notion. Para borrarlo del todo desde Notion usa la papelera en la aplicación."
+                  : "Se borrarán los datos locales de este proyecto. Esta acción no se puede deshacer aquí."}
+              </p>
+            </div>
+            <div className="space-y-3 px-5 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Para confirmar, escribe el nombre exacto del proyecto
+              </p>
+              <p className="rounded-lg bg-slate-50 px-3 py-2 font-mono text-sm font-medium text-slate-900 ring-1 ring-slate-200">
+                {project.name}
+              </p>
+              <label htmlFor="delete-project-name-confirm" className="sr-only">
+                Confirmar nombre del proyecto
+              </label>
+              <input
+                id="delete-project-name-confirm"
+                type="text"
+                value={confirmName}
+                autoFocus
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Nombre del proyecto"
+                onChange={(e) => setConfirmName(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm outline-none ring-slate-900/10 focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+              />
+              {confirmName.length > 0 && !nameMatches ? (
+                <p className="text-xs font-medium text-rose-700">Tiene que coincidir por completo con el nombre de arriba.</p>
+              ) : null}
+              {feedback && modalOpen ? (
+                <p className="text-sm text-rose-700" role="alert">
+                  {feedback}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-4">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setModalOpen(false);
+                  setFeedback(null);
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={pending || !nameMatches}
+                onClick={() => void runDelete()}
+                className="rounded-lg border border-rose-600 bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {pending ? "Eliminando…" : "Confirmar eliminación"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador: boolean }) {
   const done = p.milestones.filter((m) => m.done).length;
   const total = p.milestones.length || 1;
   const pct = Math.round((done / total) * 100);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      {soloNavegador ? (
+        <p
+          className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          role="status"
+        >
+          Este proyecto se guardó solo en este navegador (Notion no estaba configurado en el servidor al crearlo).
+        </p>
+      ) : null}
       <Link
         href="/proyectos"
         className="inline-flex items-center gap-2 rounded-full px-1 py-1 text-sm font-medium text-indigo-800 transition hover:bg-indigo-50 hover:text-indigo-950"
@@ -79,7 +284,6 @@ function ItProjectDetailBody({ p }: { p: ItProject }) {
               </span>
             </div>
             <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{p.name}</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">{p.description}</p>
           </div>
           <div className="flex flex-col items-end gap-3 shrink-0">
             <div className="flex flex-wrap justify-end gap-2">
@@ -107,6 +311,17 @@ function ItProjectDetailBody({ p }: { p: ItProject }) {
           </div>
         </div>
       </header>
+
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Descripción del proyecto</h2>
+        <div className="mt-4 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
+          {p.description.trim() === "" || p.description === "—" ? (
+            <p className="text-slate-500">Sin descripción.</p>
+          ) : (
+            p.description
+          )}
+        </div>
+      </section>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -261,6 +476,7 @@ function ItProjectDetailBody({ p }: { p: ItProject }) {
         )}
       </section>
 
+      <ItProjectDeleteActions project={p} />
     </div>
   );
 }
@@ -268,14 +484,69 @@ function ItProjectDetailBody({ p }: { p: ItProject }) {
 type Props = { id: string };
 
 export function ItProjectDetailView({ id }: Props) {
+  const searchParams = useSearchParams();
+  const soloNavegador = searchParams.get("soloNavegador") === "1";
   const { projects, ready } = useMergedItProjects();
-  const p = useMemo(() => projects.find((x) => x.id === id), [projects, id]);
+  const fromList = useMemo(() => projects.find((x) => x.id === id), [projects, id]);
 
-  if (!ready) {
+  const [notionDirect, setNotionDirect] = useState<ItProject | null>(null);
+  /** `false` mientras debamos esperar bypass por id Notion (incl. primer frame antes de useEffect). */
+  const [notionBypassSettled, setNotionBypassSettled] = useState(false);
+
+  useEffect(() => {
+    setNotionDirect(null);
+
+    if (!ready) {
+      setNotionBypassSettled(false);
+      return;
+    }
+
+    if (fromList) {
+      setNotionBypassSettled(true);
+      return;
+    }
+
+    if (!isLikelyNotionPageId(id)) {
+      setNotionBypassSettled(true);
+      return;
+    }
+
+    setNotionBypassSettled(false);
+
+    let cancelled = false;
+    void fetch(`/api/notion/projects/${encodeURIComponent(id)}`, { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const data: unknown = await res.json();
+        if (typeof data !== "object" || data === null || !("project" in data)) {
+          return null;
+        }
+        const proj = (data as { project: unknown }).project;
+        if (!proj || typeof proj !== "object") return null;
+        return proj as ItProject;
+      })
+      .then((proj) => {
+        if (!cancelled && proj) setNotionDirect(proj);
+      })
+      .finally(() => {
+        if (!cancelled) setNotionBypassSettled(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, id, fromList]);
+
+  const p = fromList ?? notionDirect;
+
+  const waitingNotionBypass =
+    ready && isLikelyNotionPageId(id) && !fromList && !notionBypassSettled;
+
+  if (!ready || waitingNotionBypass) {
     return <DetailSkeleton />;
   }
   if (!p) {
     notFound();
   }
-  return <ItProjectDetailBody p={p} />;
+  return <ItProjectDetailBody p={p} soloNavegador={soloNavegador} />;
 }

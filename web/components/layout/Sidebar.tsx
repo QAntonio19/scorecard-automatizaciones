@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { IconBriefcase, IconPanel } from "@/components/icons/NavIcons";
+import { IconBriefcase, IconPanel, IconUsers } from "@/components/icons/NavIcons";
 import { DeploymentChangelogModal } from "@/components/layout/DeploymentChangelogModal";
 import { SidebarUserBlock } from "@/components/layout/SidebarUserBlock";
 import { getCurrentVersion } from "@/lib/deploymentChangelog";
@@ -11,7 +11,19 @@ import { getCurrentVersion } from "@/lib/deploymentChangelog";
 const nav = [
   { href: "/panel", label: "Panel", Icon: IconPanel },
   { href: "/proyectos", label: "Proyectos", Icon: IconBriefcase },
+  { href: "/proyectos/responsables", label: "Responsables", Icon: IconUsers },
 ] as const;
+
+function sidebarNavActive(href: string, pathname: string): boolean {
+  if (pathname === href) return true;
+  if (href === "/proyectos/responsables") return false;
+  if (href === "/proyectos") {
+    if (!pathname.startsWith("/proyectos/")) return false;
+    return !pathname.startsWith("/proyectos/responsables");
+  }
+  if (href === "/panel") return false;
+  return pathname.startsWith(`${href}/`);
+}
 
 function NavLink({
   href,
@@ -27,7 +39,7 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const active = pathname === href || (href !== "/panel" && pathname.startsWith(href));
+  const active = sidebarNavActive(href, pathname);
   return (
     <Link
       href={href}

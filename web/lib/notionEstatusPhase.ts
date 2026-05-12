@@ -40,3 +40,21 @@ export function mapNotionEstatusToPhase(
 
   return "sin_empezar";
 }
+
+/** Inverso de `mapNotionEstatusToPhase`: fase UI → opción visible de la propiedad Notion **Estatus** (tipo status). */
+export function mapPhaseToNotionEstatus(phase: ItProjectPhase): string {
+  switch (phase) {
+    case "backlog":
+      return "Backlog";
+    case "sin_empezar":
+      return "Sin empezar";
+    case "planificacion":
+      return "En planificación";
+    case "ejecucion":
+      return "En proceso";
+    case "cierre":
+      return "Completado";
+    case "archivado":
+      return "Archivado";
+  }
+}

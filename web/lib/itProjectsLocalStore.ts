@@ -169,6 +169,22 @@ export function appendUserProject(project: ItProject): void {
   window.dispatchEvent(new CustomEvent(IT_PROJECTS_CHANGED_EVENT));
 }
 
+export function removeUserProject(id: string): void {
+  const cur = readUserProjects();
+  const next = cur.filter((p) => p.id !== id);
+  if (next.length === cur.length) return;
+  writeUserProjects(next);
+  window.dispatchEvent(new CustomEvent(IT_PROJECTS_CHANGED_EVENT));
+}
+
+/** Vacía la caché en memoria de proyectos Notion tras crear/actualizar en la API. */
+export function invalidateNotionProjectsCache(): void {
+  notionCache.data = null;
+  notionCache.error = undefined;
+  notionCache.fetchedAt = 0;
+  notionCache.promise = null;
+}
+
 /**
  * Module-level cache for Notion data — shared across all component instances.
  * Prevents duplicate fetches when navigating between Panel ↔ Proyectos.

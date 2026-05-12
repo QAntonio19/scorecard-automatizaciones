@@ -97,5 +97,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  /**
+   * Excluye `/api/*`: las rutas API usan su propio manejo (Notion por env server-side, proxy, etc.);
+   * llamar aquí a `getUser()` en cada GET/POST a `/api/...` añade coste y puede provocar 500
+   * si la sesión o el cliente SSR fallan, antes incluso del route handler.
+   */
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

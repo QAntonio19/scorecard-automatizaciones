@@ -66,12 +66,17 @@ export function titleFromNotionPagePayload(page: unknown): string {
 
 type NotionHeaders = Record<string, string>;
 
-function notionHeaders(token: string): NotionHeaders {
+/** Cabeceras para peticiones JSON a `api.notion.com` (query, páginas, mutaciones). */
+export function notionApiJsonHeaders(token: string): NotionHeaders {
   return {
     Authorization: `Bearer ${token}`,
     "Notion-Version": NOTION_VERSION,
     "Content-Type": "application/json",
   };
+}
+
+function notionHeaders(token: string): NotionHeaders {
+  return notionApiJsonHeaders(token);
 }
 
 /** Consulta todas las filas de una base (maneja paginación). */

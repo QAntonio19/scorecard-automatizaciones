@@ -6,6 +6,36 @@
   },
   "releases": [
     {
+      "version": "1.19.0",
+      "date": "2026-05-11",
+      "releasedAt": "2026-05-11T20:00:00Z",
+      "changes": [
+        "Proyectos — Tarjeta «En cartera»: cuenta solo proyectos activos (excluye Backlog y Archivado); «En ejecución» alineado al mismo subconjunto.",
+        "Responsables — Nueva vista `/proyectos/responsables`: lista editable en `localStorage`, enlace en sidebar, ancho de contenido (`max-w-xl`); opciones reactivas en «Nuevo proyecto» vía `useItProjectResponsableOptions` (corrección de hidratación sin `useSyncExternalStore` conflictivo).",
+        "Responsables — Eliminado botón «Restaurar valores por defecto» de la pantalla de gestión.",
+        "Detalle proyecto — Descripción en contenedor propio bajo el encabezado hero.",
+        "Detalle proyecto — Zona de riesgo al final de la página; eliminación con modal y confirmación escribiendo el nombre exacto del proyecto (sin `window.confirm`).",
+        "Nuevo proyecto — KRs, tareas y sprints con filas Añadir / Quitar e ids estables; período de sprint con `FormStyledDateField` (inicio/fin ISO) en lugar de texto libre.",
+        "Navegación — Item «Responsables» y resaltado activo que no colisiona con «Proyectos» en rutas hijas."
+      ]
+    },
+    {
+      "version": "1.18.0",
+      "date": "2026-05-08",
+      "releasedAt": "2026-05-08T18:00:00Z",
+      "changes": [
+        "Notion — Creación de páginas: propiedades como `status` (riesgo/urgencia) y `multi_select` (Responsable), alineadas a la base ITAI.",
+        "Notion — POST proyectos: soporte de `pmNames` (varios responsables); icono de página por defecto y env vars `NOTION_CREATE_PROJECT_ICON_*`.",
+        "API — GET Notion sin variables: 503 y `NOTION_NOT_CONFIGURED` (listado y detalle por página), coherente con POST.",
+        "Middleware — Rutas `/api/*` excluidas del matcher de Supabase para evitar 500 antes del route handler.",
+        "Formulario Nuevo proyecto — Responsable multi-selección (`FormStyledMultiSelect`); retirado párrafo explicativo largo bajo «Datos del proyecto».",
+        "Proyectos — Vista siempre Kanban; eliminados conmutador Kanban/Tabla y parámetro URL `vista` (`ItProjectsToolbar` retirado).",
+        "Proyectos — En «Todas», tablero solo fases centrales; `bk=1`/`ar=1` incorporan columnas y tarjetas Backlog/Archivo; chips agrupados («Colas»).",
+        "Proyectos — Grid Kanban con `auto-fit` para evitar columnas vacías con hueco lateral.",
+        "Panel — Eliminados listados de Backlog y Archivado (operación en vista Proyectos)."
+      ]
+    },
+    {
       "version": "1.17.0",
       "date": "2026-05-07",
       "releasedAt": "2026-05-08T01:40:00Z",
