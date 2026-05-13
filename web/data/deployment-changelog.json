@@ -6,6 +6,20 @@
   },
   "releases": [
     {
+      "version": "1.20.0",
+      "date": "2026-05-12",
+      "releasedAt": "2026-05-12T18:00:00Z",
+      "changes": [
+        "Notion — Descripción del proyecto: además de propiedades, se escribe en el cuerpo de la página (bloques) al crear/guardar; `NOTION_SYNC_PROJECT_DESCRIPTION_TO_PAGE_BODY=0` la desactiva.",
+        "Notion — Iconos al crear filas: tareas 📌, KRs *️⃣, sprints 🏃 (variables `NOTION_CREATE_TASK_ICON_EMOJI`, `NOTION_CREATE_KR_ICON_EMOJI`, `NOTION_CREATE_SPRINT_ICON_EMOJI`; sprint por defecto simple por compatibilidad API).",
+        "API — POST `/api/notion/projects`: envío de KR, sprints y tareas en el alta; segundo PATCH de relaciones; remapeo de ids locales de sprint a páginas Notion para enlazar tareas al sprint correcto.",
+        "Formulario — Listas visibles de KR y sprints añadidos (crear/editar); selector de sprint por tarea corregido para ids locales de sprint (antes parecía no guardar selección).",
+        "Formulario — Desplegable de sprint en tareas muestra solo el nombre del sprint (sin rango de fechas en la etiqueta).",
+        "Notion — Mensajes de error más claros al fallar guardados (extracción de `message`/`code` y fragmento del cuerpo de respuesta cuando aplica).",
+        "Portafolio — Listado más fresco: `fetch` con `cache: no-store`, TTL de lista 25s, refetch automático ~2,8s tras invalidar caché (crear/borrar) para acercarse a lo que ya muestra Notion."
+      ]
+    },
+    {
       "version": "1.19.0",
       "date": "2026-05-11",
       "releasedAt": "2026-05-11T20:00:00Z",

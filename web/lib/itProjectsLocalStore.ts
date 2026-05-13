@@ -3,10 +3,104 @@
 import { useEffect, useMemo, useState } from "react";
 import { IT_PROJECT_PHASE_ORDER } from "@/lib/itProjectPortfolio";
 import type { ItProject, ItProjectPhase } from "@/lib/itProjectTypes";
+import { isLikelyNotionPageId } from "@/lib/notionProjectFromPage";
 
 export const IT_PROJECTS_USER_STORAGE_KEY = "scorecard-it-projects-user-v1";
 
 export const IT_PROJECTS_CHANGED_EVENT = "scorecard-it-projects-changed";
+
+/** Emite después de invalidar la caché Notion (`invalidated`) o fusionar una fila (`upserted`). */
+export const IT_NOTION_PROJECTS_CACHE_EVENT = "scorecard-it-notion-projects-cache";
+
+export type ITNotionProjectsCacheEventDetail = { reason: "invalidated" } | { reason: "upserted" };
+
+/** Texto de descripción de proyecto guardado aquí cuando Notion no devuelve la columna o el refetch pisa la caché. */
+const IT_NOTION_DESCRIPTION_OVERLAY_KEY = "scorecard-notion-project-description-overlay-v1";
+
+function readNotionDescriptionOverlayMap(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(IT_NOTION_DESCRIPTION_OVERLAY_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+function writeNotionDescriptionOverlayMap(map: Record<string, string>): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(IT_NOTION_DESCRIPTION_OVERLAY_KEY, JSON.stringify(map));
+}
+
+/** Persiste la descripción que el usuario guarda en la app (proyecto Notion) para sobrevivir a refetch y recargas. */
+function rememberNotionProjectDescriptionOverlay(project: ItProject): void {
+  if (!isLikelyNotionPageId(project.id)) return;
+  const map = readNotionDescriptionOverlayMap();
+  const t = (project.description ?? "").trim();
+  if (t === "" || t === "—") {
+    delete map[project.id];
+  } else {
+    map[project.id] = t.slice(0, 16_000);
+  }
+  writeNotionDescriptionOverlayMap(map);
+}
+
+/**
+ * Cuando la API devuelve proyectos sin descripción (columna ausente en Notion o lista incompleta),
+ * conserva la descripción que ya teníamos en caché o en el overlay local.
+ */
+export function mergeNotionProjectsPreserveLocalDescriptions(
+  incoming: ItProject[],
+  previous: ItProject[] | null | undefined,
+): ItProject[] {
+  const prevById = new Map((previous ?? []).map((p) => [p.id, p]));
+  const overlay = readNotionDescriptionOverlayMap();
+
+  return incoming.map((p) => {
+    if (!isLikelyNotionPageId(p.id)) return p;
+
+    const incD = (p.description ?? "").trim();
+    const incEmpty = incD === "" || incD === "—";
+    if (!incEmpty) return p;
+
+    const old = prevById.get(p.id);
+    const oldD = (old?.description ?? "").trim();
+    const oldRich = oldD !== "" && oldD !== "—";
+    if (oldRich) {
+      return { ...p, description: old!.description };
+    }
+
+    const fromOverlay = overlay[p.id]?.trim() ?? "";
+    if (fromOverlay !== "" && fromOverlay !== "—") {
+      return { ...p, description: fromOverlay };
+    }
+
+    return p;
+  });
+}
+
+/** Para GET puntual de un proyecto Notion cuando la respuesta no incluye descripción. */
+export function withNotionDescriptionOverlayIfMissing(project: ItProject): ItProject {
+  if (!isLikelyNotionPageId(project.id)) return project;
+  const incD = (project.description ?? "").trim();
+  if (incD !== "" && incD !== "—") return project;
+  const map = readNotionDescriptionOverlayMap();
+  const o = map[project.id]?.trim() ?? "";
+  if (o !== "" && o !== "—") {
+    return { ...project, description: o };
+  }
+  return project;
+}
+
+function dispatchNotionProjectsCache(detail: ITNotionProjectsCacheEventDetail): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<ITNotionProjectsCacheEventDetail>(IT_NOTION_PROJECTS_CACHE_EVENT, { detail }),
+  );
+}
 
 function isStringArray(x: unknown): x is string[] {
   return Array.isArray(x) && x.every((i) => typeof i === "string");
@@ -55,7 +149,15 @@ function sanitizePlannedTasks(raw: unknown): ItProject["plannedTasks"] {
     const title = typeof row.title === "string" ? row.title.trim() : "";
     if (!title) continue;
     const id = typeof row.id === "string" ? row.id : `task-${i + 1}`;
-    out.push({ id, title });
+    const sprintIdRaw = typeof row.sprintId === "string" ? row.sprintId.trim() : "";
+    const sprintTitleRaw = typeof row.sprintTitle === "string" ? row.sprintTitle.trim() : "";
+    const descriptionRaw = typeof row.description === "string" ? row.description.trim() : "";
+
+    const outRow: ItProject["plannedTasks"][number] = { id, title };
+    if (descriptionRaw) outRow.description = descriptionRaw;
+    if (sprintIdRaw) outRow.sprintId = sprintIdRaw;
+    if (sprintTitleRaw) outRow.sprintTitle = sprintTitleRaw;
+    out.push(outRow);
   }
   return out;
 }
@@ -155,17 +257,34 @@ export function writeUserProjects(projects: ItProject[]): void {
   window.localStorage.setItem(IT_PROJECTS_USER_STORAGE_KEY, JSON.stringify(projects));
 }
 
-/** Combina seed y proyectos creados en el navegador; si hay mismo `id`, gana el del usuario. */
+/**
+ * Combina lista Notion/API (`seed`) y proyectos solo-navegador (`user`).
+ * Los `id` con forma de UUID de página Notion deben usar siempre los datos sincronizados del servidor:
+ * una copia antigua en `localStorage` no debe ocultar sprints/KR enlazados vía API.
+ */
 export function mergeItProjectsWithSeed(seed: ItProject[], user: ItProject[]): ItProject[] {
   const map = new Map<string, ItProject>();
   for (const p of seed) map.set(p.id, p);
-  for (const p of user) map.set(p.id, p);
+  for (const p of user) {
+    if (isLikelyNotionPageId(p.id)) continue;
+    map.set(p.id, p);
+  }
   return [...map.values()];
 }
 
 export function appendUserProject(project: ItProject): void {
   const cur = readUserProjects();
   writeUserProjects([...cur, project]);
+  window.dispatchEvent(new CustomEvent(IT_PROJECTS_CHANGED_EVENT));
+}
+
+/** Actualiza un proyecto sólo navegador o lo inserta si no existía. */
+export function upsertUserProject(project: ItProject): void {
+  const cur = readUserProjects();
+  const idx = cur.findIndex((p) => p.id === project.id);
+  const next =
+    idx === -1 ? [...cur, project] : cur.map((p, i) => (i === idx ? project : p));
+  writeUserProjects(next);
   window.dispatchEvent(new CustomEvent(IT_PROJECTS_CHANGED_EVENT));
 }
 
@@ -177,12 +296,72 @@ export function removeUserProject(id: string): void {
   window.dispatchEvent(new CustomEvent(IT_PROJECTS_CHANGED_EVENT));
 }
 
-/** Vacía la caché en memoria de proyectos Notion tras crear/actualizar en la API. */
+/** Tras crear/borrar, Notion UI suele actualizar antes que `databases/query`; un segundo listado mejora el acierto. */
+const NOTION_LIST_FOLLOW_UP_REFETCH_MS = 2800;
+
+/** Vacía la caché en memoria de proyectos Notion tras crear/borrar/invalidar desde la lista. Las pantallas pueden reconsultar `/api/notion/projects`. */
 export function invalidateNotionProjectsCache(): void {
   notionCache.data = null;
   notionCache.error = undefined;
   notionCache.fetchedAt = 0;
   notionCache.promise = null;
+  dispatchNotionProjectsCache({ reason: "invalidated" });
+  window.setTimeout(() => {
+    refetchNotionProjectsListBestEffort();
+  }, NOTION_LIST_FOLLOW_UP_REFETCH_MS);
+}
+
+/**
+ * Sustituye o inserta una fila en la caché Notion así la UI muestra ya el proyecto devuelto por PATCH
+ * sin esperar a que Notion reaparezca en un listado remoto más lento que la misma página.
+ */
+export function upsertNotionProjectInCache(project: ItProject): void {
+  const cur = notionCache.data;
+  if (cur && cur.length > 0) {
+    const idx = cur.findIndex((p) => p.id === project.id);
+    notionCache.data = idx === -1 ? [...cur, project] : cur.map((p, i) => (i === idx ? project : p));
+  } else {
+    notionCache.data = [project];
+  }
+  notionCache.fetchedAt = Date.now();
+  notionCache.error = undefined;
+  notionCache.promise = null;
+  rememberNotionProjectDescriptionOverlay(project);
+  dispatchNotionProjectsCache({ reason: "upserted" });
+}
+
+/**
+ * Repuebla desde el listado servidor (mantener portafolio alineado) sin bloquear la navegación.
+ * Se ejecuta después de `upsertNotionProjectInCache` cuando el PATCH ya devolvió `{ project }`.
+ */
+export function refetchNotionProjectsListBestEffort(): void {
+  const previous = notionCache.data;
+  void fetch("/api/notion/projects", { cache: "no-store" })
+    .then((res) => {
+      if (!res.ok) return null;
+      return res.json() as Promise<{ projects?: unknown }>;
+    })
+    .then((data) => {
+      const list = data?.projects;
+      if (!Array.isArray(list)) return;
+      const ok = list.filter(isItProjectRecord).map(normalizeStoredProject);
+      notionCache.data = mergeNotionProjectsPreserveLocalDescriptions(ok, previous);
+      notionCache.fetchedAt = Date.now();
+      notionCache.error = undefined;
+      notionCache.promise = null;
+      dispatchNotionProjectsCache({ reason: "upserted" });
+    })
+    .catch(() => {
+      /* no-op — la fila puntual ya quedó con upsert */
+    });
+}
+
+/** Extrae `{ project }` de la respuesta JSON de PATCH proyecto Notion tras validar tipos. */
+export function notionPatchResponseToProject(payload: unknown): ItProject | null {
+  if (typeof payload !== "object" || payload === null || !("project" in payload)) return null;
+  const p = (payload as { project: unknown }).project;
+  if (!isItProjectRecord(p)) return null;
+  return normalizeStoredProject(p);
 }
 
 /**
@@ -196,7 +375,7 @@ const notionCache: {
   promise: Promise<void> | null;
 } = { data: null, error: undefined, fetchedAt: 0, promise: null };
 
-const CACHE_TTL_MS = 60_000; // 60s — matches server revalidate
+const CACHE_TTL_MS = 25_000; // Listado puede quedar corto vs Notion UI; TTL bajo + invalidación + refetch diferido
 
 function fetchNotionIfNeeded(
   onData: (d: ItProject[]) => void,
@@ -222,18 +401,20 @@ function fetchNotionIfNeeded(
     return;
   }
 
-  // Start a new fetch
-  notionCache.promise = fetch("/api/notion/projects")
+  // Start a new fetch (sin caché HTTP del navegador; alinea con Notion tras crear / borrar)
+  notionCache.promise = fetch("/api/notion/projects", { cache: "no-store" })
     .then((res) => {
       if (!res.ok) throw new Error("Error HTTP");
       return res.json();
     })
     .then((data) => {
       if (data.projects) {
-        notionCache.data = data.projects;
+        const list = Array.isArray(data.projects) ? data.projects : [];
+        const normalized = list.filter(isItProjectRecord).map(normalizeStoredProject);
+        notionCache.data = mergeNotionProjectsPreserveLocalDescriptions(normalized, notionCache.data);
         notionCache.error = undefined;
         notionCache.fetchedAt = Date.now();
-        onData(data.projects);
+        onData(notionCache.data ?? normalized);
       } else if (data.error) {
         notionCache.error = data.error;
         onError(data.error);
@@ -273,14 +454,35 @@ export function useMergedItProjects(): {
     sync();
     window.addEventListener(IT_PROJECTS_CHANGED_EVENT, sync);
 
-    fetchNotionIfNeeded(
-      (d) => { setNotionData(d); setLoading(false); },
-      (e) => { setError(e); setLoading(false); },
-      () => { setLoading(false); },
-    );
+    const onNotionData = (d: ItProject[]) => {
+      setNotionData(d);
+      setLoading(false);
+    };
+    const onNotionError = (e: string) => {
+      setError(e);
+      setLoading(false);
+    };
+    const onNotionDone = () => setLoading(false);
+
+    fetchNotionIfNeeded(onNotionData, onNotionError, onNotionDone);
+
+    const onNotionCache = (ev: Event) => {
+      const ce = ev as CustomEvent<ITNotionProjectsCacheEventDetail>;
+      const detail = ce.detail;
+      if (!detail) return;
+      if (detail.reason === "invalidated") {
+        fetchNotionIfNeeded(onNotionData, onNotionError, onNotionDone);
+      } else if (detail.reason === "upserted") {
+        setNotionData([...(notionCache.data ?? [])]);
+        setLoading(false);
+        setError(undefined);
+      }
+    };
+    window.addEventListener(IT_NOTION_PROJECTS_CACHE_EVENT, onNotionCache);
 
     return () => {
       window.removeEventListener(IT_PROJECTS_CHANGED_EVENT, sync);
+      window.removeEventListener(IT_NOTION_PROJECTS_CACHE_EVENT, onNotionCache);
     };
   }, []);
 

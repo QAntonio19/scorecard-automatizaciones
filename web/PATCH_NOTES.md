@@ -1,3 +1,32 @@
+# Patch Notes v1.20.0 — "Notion en profundidad · Alta completa y lista al día"
+
+## Resumen de la versión
+La descripción del proyecto se sincroniza también al **cuerpo de la página** en Notion; el alta desde la web puede llevar **KR, sprints y tareas** en un solo flujo; iconos distintos por tipo de fila; formularios corregidos (listas KR/sprint, asignación tarea→sprint con ids locales); errores de Notion más legibles; y el portafolio refresca el listado de forma más fiable frente al retraso típico entre la UI de Notion y la API.
+
+---
+
+## Notion y API
+- **Cuerpo de página**: tras POST/PATCH de proyecto, se vacían bloques de primer nivel y se añade la descripción como párrafo(s) (troceo 2000 caracteres). Variable `NOTION_SYNC_PROJECT_DESCRIPTION_TO_PAGE_BODY=0` desactiva la sincronización al cuerpo.
+- **POST crear proyecto**: acepta `keyResultLines`, `sprintRows` y `taskLines`; tras crear la fila del proyecto se ejecuta el mismo flujo de relaciones que en PATCH. Los `sprintId` locales de tareas se **remapean** a los UUID devueltos al crear sprints, para que la relación tarea↔sprint sea correcta en Notion.
+- **Iconos al crear páginas hijas**: tarea 📌, KR *️⃣ (keycap), sprint 🏃 (por defecto estable para la API; `NOTION_CREATE_SPRINT_ICON_EMOJI` permite otro, p. ej. 🏃‍➡️ si tu integración lo acepta). Proyecto sigue usando `NOTION_CREATE_PROJECT_ICON_*`.
+- **Errores**: `extractNotionErrorMessage` ampliado; si Notion no devuelve un `message` parseable, el aviso incluye un extracto del cuerpo de error.
+
+## Formularios IT proyecto
+- **KR y sprints**: vuelven a mostrarse las listas de ítems añadidos con acción Quitar; vacíos con mensaje contextual.
+- **Tarea → sprint**: el `FormStyledSelect` usa como valor controlado cualquier `sprintRowId` que exista en opciones (incluidos ids **locales** del formulario), no solo UUID Notion — arregla la selección que no “pegaba”.
+- **Etiquetas del desplegable de sprint**: solo **nombre** del sprint, sin concatenar fechas.
+
+## Portafolio / caché cliente
+- Listado Notion con **`cache: "no-store"`** para evitar respuestas HTTP viejas en el navegador.
+- **TTL** de la caché en memoria reducido (~25 s).
+- Tras **`invalidateNotionProjectsCache`** (crear, borrar, etc.): además del refetch inmediato por evento, un **segundo listado ~2,8 s** después para cuando la API de Notion aún no indexaba la fila en el `query` (acerca la web a lo que ya ves en Notion).
+
+---
+
+*Registrado el 12 de mayo de 2026.*
+
+---
+
 # Patch Notes v1.19.0 — "Responsables UX · Detalle y alta de proyecto más claros"
 
 ## Resumen de la versión

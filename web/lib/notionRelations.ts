@@ -28,6 +28,19 @@ function findPropertyKey(props: Record<string, unknown>, name: string): string |
 }
 
 /**
+ * Clave real de una propiedad `relation` en `props` cuyo nombre coincide con `name`
+ * (comparación sin distinguir mayúsculas).
+ */
+export function relationPropertyKeyByName(
+  props: Record<string, unknown>,
+  name: string,
+): string | undefined {
+  const key = findPropertyKey(props, name.trim());
+  if (!key || !isRelationProperty(props[key])) return undefined;
+  return key;
+}
+
+/**
  * Usa el primer nombre de `candidates` que exista en `properties` y devuelve IDs de relación
  * (puede ser un array vacío si la relación no tiene enlaces).
  */
@@ -43,6 +56,69 @@ export function relationIdsFromCandidates(
     if (isRelationProperty(prop)) return relationPageIds(prop);
   }
   return [];
+}
+
+/** Candidatos de nombre para la propiedad relación Sprint en la página de una **tarea** (base de tareas). */
+export function notionTaskPageSprintRelationCandidates(): string[] {
+  const env = process.env.NOTION_PROP_TASK_PAGE_SPRINT_RELATION?.trim();
+  if (env) return [env];
+  return [
+    "Sprint",
+    "sprint",
+    "Sprints",
+    "sprints",
+    "Iteración",
+    "iteración",
+    "Iteraciones",
+    "Proyecto sprint",
+  ];
+}
+
+/** IDs de página Notion típicos (`xxxxxxxx-xxxx-...`). */
+function looksLikeNotionPageId(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
+}
+
+const TASK_SPRINT_FETCH_CONCURRENCY = 15;
+
+/** Primera página sprint enlazada desde cada página de tarea según GET de propiedades. */
+export async function resolveTaskLinkedFirstSprintIds(
+  taskPageIds: readonly string[],
+  token: string,
+): Promise<Map<string, string | undefined>> {
+  const unique = [...new Set(taskPageIds.filter((id) => looksLikeNotionPageId(id)))];
+  const map = new Map<string, string | undefined>();
+  const cands = notionTaskPageSprintRelationCandidates();
+
+  const fetchOne = async (tid: string): Promise<void> => {
+    try {
+      const res = await fetch(`https://api.notion.com/v1/pages/${encodeURIComponent(tid)}`, {
+        headers: notionApiJsonHeaders(token),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        map.set(tid, undefined);
+        return;
+      }
+      const page: unknown = await res.json();
+      if (!isRecord(page)) {
+        map.set(tid, undefined);
+        return;
+      }
+      const props = page.properties;
+      const ids = relationIdsFromCandidates(isRecord(props) ? props : undefined, cands);
+      map.set(tid, ids[0]);
+    } catch {
+      map.set(tid, undefined);
+    }
+  };
+
+  for (let i = 0; i < unique.length; i += TASK_SPRINT_FETCH_CONCURRENCY) {
+    const chunk = unique.slice(i, i + TASK_SPRINT_FETCH_CONCURRENCY);
+    await Promise.all(chunk.map(fetchOne));
+  }
+
+  return map;
 }
 
 /** Título de una página de base de datos: primera propiedad tipo `title`. */
@@ -175,9 +251,44 @@ export function notionRelationPropertyCandidates(
   if (envName) return [envName];
 
   if (kind === "tasks") return ["tareas", "Tareas", "Tarea", "task", "Tasks"];
-  if (kind === "sprints") return ["Sprints", "sprints", "Sprint", "sprint"];
+  if (kind === "sprints") {
+    return [
+      "Sprints",
+      "sprints",
+      "Sprint",
+      "sprint",
+      // Nombres frecuentes en bases en español
+      "Iteraciones",
+      "iteraciones",
+      "Iteración",
+      "iteración",
+      "Ciclos",
+      "ciclos",
+      "Ciclo",
+      "ciclo",
+      "Ventanas de iteración",
+      "Ventanas",
+      "ventanas",
+    ];
+  }
   if (kind === "keyResults") {
     return ["KR", "kr", "KRs", "Key results", "Key Results", "Resultados clave", "Resultado clave"];
   }
   return ["entregables", "Entregables", "Entregable", "deliverables", "Deliverables"];
+}
+
+/**
+ * Primera propiedad tipo `relation` que coincida con los nombres candidatos (uso en PATCH del proyecto IT).
+ */
+export function resolveRelationPropertyKeyFromKind(
+  properties: Record<string, unknown>,
+  kind: "tasks" | "sprints" | "deliverables" | "keyResults",
+): string | undefined {
+  for (const name of notionRelationPropertyCandidates(kind)) {
+    const key = findPropertyKey(properties, name);
+    if (!key) continue;
+    const prop = properties[key];
+    if (isRelationProperty(prop)) return key;
+  }
+  return undefined;
 }

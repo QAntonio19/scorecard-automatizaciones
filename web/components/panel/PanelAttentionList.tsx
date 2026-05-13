@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { ItProject } from "@/lib/itProjectTypes";
+import type { ItProject, ItProjectPhase } from "@/lib/itProjectTypes";
+
 import { phaseLabel, riskLabel, urgencyLabel } from "@/lib/itProjectPortfolio";
 
 function RiskBadge({ risk }: { risk: ItProject["riskLevel"] }) {
@@ -21,10 +22,16 @@ function milestoneProgressPct(p: ItProject): number {
   return Math.round((p.milestones.filter((m) => m.done).length / p.milestones.length) * 100);
 }
 
+const ATTENTION_PHASES = ["planificacion", "ejecucion"] as const satisfies readonly ItProjectPhase[];
+
 export function PanelAttentionList({ projects }: { projects: ItProject[] }) {
-  // Proyectos que requieren atención: alto riesgo O urgencia alta, excluyendo archivados
+  // Atención: alto riesgo O urgencia alta, solo proyectos activos en planificación o ejecución
   const attention = projects
-    .filter((p) => p.phase !== "archivado" && (p.riskLevel === "alto" || p.urgencyLevel === "alta"))
+    .filter(
+      (p) =>
+        ATTENTION_PHASES.includes(p.phase as (typeof ATTENTION_PHASES)[number]) &&
+        (p.riskLevel === "alto" || p.urgencyLevel === "alta"),
+    )
     .sort((a, b) => {
       const riskOrder = { alto: 0, medio: 1, bajo: 2 };
       return riskOrder[a.riskLevel] - riskOrder[b.riskLevel];
@@ -39,7 +46,9 @@ export function PanelAttentionList({ projects }: { projects: ItProject[] }) {
             {attention.length}
           </span>
         </h2>
-        <p className="mt-0.5 text-xs text-slate-500">Proyectos con riesgo alto o urgencia alta</p>
+        <p className="mt-0.5 text-xs text-slate-500">
+          En planificación o en proceso, con nivel alto de urgencia y/o de riesgo
+        </p>
       </header>
 
       {attention.length === 0 ? (

@@ -21,6 +21,11 @@ export interface ItProjectMilestone {
 export interface ItProjectPlannedTask {
   id: string;
   title: string;
+  /** Texto libre de contexto (formulario; no sincronizado con Notion hasta ampliar la API de tareas). */
+  description?: string;
+  /** Página sprint en Notion enlazada desde la fila de tarea (si la base lo permite y la lectura encuentra la relación). */
+  sprintId?: string;
+  sprintTitle?: string;
 }
 
 /** Key result vinculado al proyecto (objetivo medible / línea estratégica) */

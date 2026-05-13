@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useCanEdit } from "@/hooks/useCanEdit";
+import { useResolvedItProject } from "@/hooks/useResolvedItProject";
 import {
   invalidateNotionProjectsCache,
   removeUserProject,
-  useMergedItProjects,
 } from "@/lib/itProjectsLocalStore";
 import { isLikelyNotionPageId } from "@/lib/notionProjectFromPage";
 import { phaseLabel, riskLabel, urgencyLabel, urgencyBadgeClass } from "@/lib/itProjectPortfolio";
+import {
+  computeProjectScopeProgress,
+  projectScopeProgressFillClass,
+} from "@/lib/itProjectScopeProgress";
 import type { ItProject } from "@/lib/itProjectTypes";
 
 function riskBarClass(risk: "bajo" | "medio" | "alto"): string {
@@ -246,9 +250,11 @@ function ItProjectDeleteActions({ project }: { project: ItProject }) {
 }
 
 function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador: boolean }) {
-  const done = p.milestones.filter((m) => m.done).length;
-  const total = p.milestones.length || 1;
-  const pct = Math.round((done / total) * 100);
+  const canEdit = useCanEdit();
+  const scopeProgress = computeProjectScopeProgress(p);
+  const scopeBarPct = scopeProgress.total === 0 ? 0 : scopeProgress.percent;
+  const scopeBarFill =
+    scopeProgress.total === 0 ? "bg-slate-400" : projectScopeProgressFillClass(scopeProgress.percent);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -260,15 +266,25 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
           Este proyecto se guardó solo en este navegador (Notion no estaba configurado en el servidor al crearlo).
         </p>
       ) : null}
-      <Link
-        href="/proyectos"
-        className="inline-flex items-center gap-2 rounded-full px-1 py-1 text-sm font-medium text-indigo-800 transition hover:bg-indigo-50 hover:text-indigo-950"
-      >
-        <span aria-hidden className="text-lg leading-none">
-          ←
-        </span>
-        Volver a proyectos
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3 gap-y-2">
+        <Link
+          href="/proyectos"
+          className="inline-flex items-center gap-2 rounded-full px-1 py-1 text-sm font-medium text-indigo-800 transition hover:bg-indigo-50 hover:text-indigo-950"
+        >
+          <span aria-hidden className="text-lg leading-none">
+            ←
+          </span>
+          Volver a proyectos
+        </Link>
+        {canEdit === true ? (
+          <Link
+            href={`/proyectos/${encodeURIComponent(p.id)}/edit`}
+            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 transition-all hover:bg-slate-50 hover:text-sky-700 hover:ring-sky-200 hover:shadow"
+          >
+            Editar
+          </Link>
+        ) : null}
+      </div>
 
       <header
         className={`relative mt-6 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/30 to-slate-50/80 px-6 py-8 shadow-sm sm:px-8 sm:py-10 ${riskBarClass(
@@ -294,20 +310,32 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
                 Urgencia: {urgencyLabel(p.urgencyLevel)}
               </span>
             </div>
-            <a
-              href={`https://notion.so/${p.id.replace(/-/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 transition-all hover:bg-slate-50 hover:text-indigo-600 hover:ring-indigo-200 hover:shadow"
-              title="Abrir proyecto en Notion"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-              Abrir en Notion
-            </a>
+            <div className="mt-1 flex flex-wrap justify-end gap-2">
+              {isLikelyNotionPageId(p.id) ? (
+                <a
+                  href={`https://notion.so/${p.id.replace(/-/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 transition-all hover:bg-slate-50 hover:text-indigo-600 hover:ring-indigo-200 hover:shadow"
+                  title="Abrir proyecto en Notion"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4"
+                  >
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                  Abrir en Notion
+                </a>
+              ) : null}
+            </div>
           </div>
         </div>
       </header>
@@ -347,12 +375,42 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Avance de hitos</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            {done} de {total} hitos completados ({pct}%).
-          </p>
-          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full rounded-full bg-indigo-600 transition-[width]" style={{ width: `${pct}%` }} />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Progreso actual del proyecto</h2>
+          {scopeProgress.total === 0 ? (
+            <>
+              <p className="mt-2 text-sm text-slate-600">
+                Aún no hay <strong>KR</strong>, <strong>tareas</strong> ni <strong>sprints</strong> vinculados para calcular avance en
+                esta vista.
+              </p>
+              <p className="mt-3 text-xs leading-relaxed text-slate-500">
+                Cuando existan ítems, el porcentaje promedia KR + tareas + sprints marcados como hechos si el texto empieza con{" "}
+                <span className="font-mono">[x]</span>, emoji de check o etiquetas tipo <strong>Hecho:</strong>.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-slate-600">
+                {scopeProgress.completed} de {scopeProgress.total} elementos (KR + tareas + sprints) considerados{" "}
+                <strong className="font-medium text-slate-800">completados</strong> ({scopeProgress.percent}%).
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                Completados detectados desde el texto del ítem (p. ej. <span className="font-mono">[x]</span>,{" "}
+                <span className="font-mono">✅</span>) en Notion o en proyectos sólo navegador.
+              </p>
+            </>
+          )}
+          <div
+            className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-200"
+            role="progressbar"
+            aria-valuenow={scopeBarPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Progreso de alcance del proyecto"
+          >
+            <div
+              className={`h-full rounded-full transition-[width] duration-500 ease-out ${scopeBarFill}`}
+              style={{ width: `${scopeBarPct}%` }}
+            />
           </div>
         </section>
       </div>
@@ -388,6 +446,62 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
           </div>
 
           <div className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900">Tareas</h3>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Trabajo planificado ligado al proyecto. Si viene de Notion con relación sprint, se muestra el nombre aquí.
+            </p>
+            {p.plannedTasks.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-500">
+                No hay tareas vinculadas. En Notion enlaza las filas de tu base de tareas desde la página del proyecto.
+              </p>
+            ) : (
+              <div
+                className="mt-4 max-h-[min(22rem,50vh)] overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]"
+                role="region"
+                aria-label="Lista de tareas"
+              >
+                <ul className="space-y-2">
+                  {p.plannedTasks.map((t) => {
+                    const sid = typeof t.sprintId === "string" ? t.sprintId.trim() : "";
+                    const sprintResolved = sid ? p.sprints.find((s) => s.id === sid) : undefined;
+                    const sprintHeadline = (t.sprintTitle ?? sprintResolved?.title ?? "").trim();
+                    const sprintBoardHref =
+                      sprintResolved !== undefined
+                        ? `/proyectos/${encodeURIComponent(p.id)}/sprints/${encodeURIComponent(sprintResolved.id)}`
+                        : null;
+
+                    return (
+                      <li key={t.id} className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+                        <span className="text-sm font-medium text-slate-900">{t.title}</span>
+                        {t.description?.trim() ? (
+                          <p className="mt-1.5 whitespace-pre-wrap text-xs leading-relaxed text-slate-600">
+                            {t.description.trim()}
+                          </p>
+                        ) : null}
+                        {sprintHeadline ? (
+                          <p className="mt-1 text-xs text-violet-900/95">
+                            <span className="font-semibold text-slate-600">Sprint: </span>
+                            {sprintBoardHref ? (
+                              <Link
+                                href={sprintBoardHref}
+                                className="font-medium text-violet-800 underline-offset-2 hover:underline"
+                              >
+                                {sprintHeadline}
+                              </Link>
+                            ) : (
+                              sprintHeadline
+                            )}
+                          </p>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="text-sm font-bold text-slate-900">Sprints</h3>
             <p className="mt-1 text-xs leading-relaxed text-slate-500">
               Ventanas de iteración planeadas sobre el proyecto.
@@ -402,41 +516,19 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
               >
                 <ul className="space-y-3">
                   {p.sprints.map((s) => (
-                    <li key={s.id} className="rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2.5">
-                      <span className="text-sm font-medium text-slate-900">{s.title}</span>
-                      {s.timeframe ? (
-                        <p className="mt-0.5 font-mono text-xs text-violet-800/90">{s.timeframe}</p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900">Entregables</h3>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500">
-              Artefactos o resultados acordados (documentación, aplicaciones, informes…).
-            </p>
-            {p.deliverables.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No hay entregables cargados.</p>
-            ) : (
-              <div
-                className="mt-4 max-h-[min(22rem,50vh)] overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]"
-                role="region"
-                aria-label="Lista de entregables"
-              >
-                <ul className="space-y-2">
-                  {p.deliverables.map((d) => (
-                    <li
-                      key={d.id}
-                      className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 rounded-lg border border-sky-100 bg-sky-50/35 px-3 py-2"
-                    >
-                      <span className="text-sm font-medium text-slate-900">{d.title}</span>
-                      {d.targetDate ? (
-                        <span className="tabular-nums text-xs font-medium text-sky-900/85">{d.targetDate}</span>
-                      ) : null}
+                    <li key={s.id}>
+                      <Link
+                        href={`/proyectos/${encodeURIComponent(p.id)}/sprints/${encodeURIComponent(s.id)}`}
+                        className="block rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2.5 transition hover:border-violet-200 hover:bg-violet-50/70"
+                      >
+                        <span className="text-sm font-medium text-slate-900">{s.title}</span>
+                        <span className="ml-2 text-[11px] font-semibold uppercase tracking-wide text-violet-700">
+                          Ver tablero
+                        </span>
+                        {s.timeframe ? (
+                          <p className="mt-0.5 font-mono text-xs text-violet-800/90">{s.timeframe}</p>
+                        ) : null}
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -444,36 +536,6 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
             )}
           </div>
         </div>
-      </section>
-
-      <section className="mt-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Hitos</h2>
-        {p.milestones.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">Aún no hay hitos. Podrás gestionarlos cuando exista persistencia en API.</p>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {p.milestones.map((m) => (
-              <li
-                key={m.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5"
-              >
-                <span className={`text-sm font-medium ${m.done ? "text-slate-500 line-through" : "text-slate-900"}`}>
-                  {m.title}
-                </span>
-                <span className="text-xs tabular-nums text-slate-500">{m.dueDate}</span>
-                {m.done ? (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800">
-                    Hecho
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600">
-                    Pendiente
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
 
       <ItProjectDeleteActions project={p} />
@@ -486,63 +548,10 @@ type Props = { id: string };
 export function ItProjectDetailView({ id }: Props) {
   const searchParams = useSearchParams();
   const soloNavegador = searchParams.get("soloNavegador") === "1";
-  const { projects, ready } = useMergedItProjects();
-  const fromList = useMemo(() => projects.find((x) => x.id === id), [projects, id]);
 
-  const [notionDirect, setNotionDirect] = useState<ItProject | null>(null);
-  /** `false` mientras debamos esperar bypass por id Notion (incl. primer frame antes de useEffect). */
-  const [notionBypassSettled, setNotionBypassSettled] = useState(false);
+  const { loading, project: p } = useResolvedItProject(id);
 
-  useEffect(() => {
-    setNotionDirect(null);
-
-    if (!ready) {
-      setNotionBypassSettled(false);
-      return;
-    }
-
-    if (fromList) {
-      setNotionBypassSettled(true);
-      return;
-    }
-
-    if (!isLikelyNotionPageId(id)) {
-      setNotionBypassSettled(true);
-      return;
-    }
-
-    setNotionBypassSettled(false);
-
-    let cancelled = false;
-    void fetch(`/api/notion/projects/${encodeURIComponent(id)}`, { cache: "no-store" })
-      .then(async (res) => {
-        if (!res.ok) return null;
-        const data: unknown = await res.json();
-        if (typeof data !== "object" || data === null || !("project" in data)) {
-          return null;
-        }
-        const proj = (data as { project: unknown }).project;
-        if (!proj || typeof proj !== "object") return null;
-        return proj as ItProject;
-      })
-      .then((proj) => {
-        if (!cancelled && proj) setNotionDirect(proj);
-      })
-      .finally(() => {
-        if (!cancelled) setNotionBypassSettled(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, id, fromList]);
-
-  const p = fromList ?? notionDirect;
-
-  const waitingNotionBypass =
-    ready && isLikelyNotionPageId(id) && !fromList && !notionBypassSettled;
-
-  if (!ready || waitingNotionBypass) {
+  if (loading) {
     return <DetailSkeleton />;
   }
   if (!p) {

@@ -5,6 +5,7 @@ import {
   notionRelationPropertyCandidates,
   relationIdsFromCandidates,
   resolveNotionRelatedPageTitles,
+  resolveTaskLinkedFirstSprintIds,
 } from "@/lib/notionRelations";
 import { resolveItProjectPmName } from "@/lib/notionProjectResponsable";
 
@@ -31,6 +32,39 @@ function parentDatabaseIdFromPage(page: unknown): string | undefined {
     return parent.database_id;
   }
   return undefined;
+}
+
+function notionRichTextBlocksToPlain(prop: unknown): string {
+  if (!prop || typeof prop !== "object") return "";
+  const rt = (prop as { rich_text?: Array<{ plain_text?: string }> }).rich_text;
+  if (!Array.isArray(rt)) return "";
+  return rt
+    .map((b) => (typeof b?.plain_text === "string" ? b.plain_text : ""))
+    .join("")
+    .trim();
+}
+
+/**
+ * Lee la descripción del proyecto desde propiedades Notion (rich_text).
+ * Usa NOTION_PROP_PROJECT_DESCRIPTION si está definido; si no, prueba nombres habituales.
+ */
+function notionProjectDescriptionFromPageProperties(
+  props: Record<string, unknown> | undefined,
+): string {
+  if (!props) return "";
+  const envName = process.env.NOTION_PROP_PROJECT_DESCRIPTION?.trim();
+  const ordered = [envName, "Descripción", "Descripción del proyecto", "Description"].filter(
+    (x): x is string => Boolean(x),
+  );
+  const seen = new Set<string>();
+  for (const name of ordered) {
+    if (seen.has(name)) continue;
+    seen.add(name);
+    if (!(name in props)) continue;
+    const text = notionRichTextBlocksToPlain(props[name]);
+    if (text) return text.slice(0, 16_000);
+  }
+  return "";
 }
 
 type RowExtract = {
@@ -138,7 +172,7 @@ function notionRowToExtract(
       id,
       code: `PRJ-${id.split("-")[0].toUpperCase()}`,
       name,
-      description: "",
+      description: notionProjectDescriptionFromPageProperties(props),
       phase,
       sponsor: "Notion Sync",
       pmName,
@@ -166,12 +200,21 @@ export async function notionRowsToItProjects(rows: unknown[], token: string): Pr
     notionRowToExtract(r, krPropNames, taskPropNames, sprintPropNames, deliverablePropNames),
   );
 
+  const sprintByTaskId = await resolveTaskLinkedFirstSprintIds(
+    extracted.flatMap((ex) => ex.taskIds),
+    token,
+  );
+
   const relatedIdSet = new Set<string>();
   for (const ex of extracted) {
     for (const kid of ex.keyResultIds) relatedIdSet.add(kid);
     for (const tid of ex.taskIds) relatedIdSet.add(tid);
     for (const sid of ex.sprintIds) relatedIdSet.add(sid);
     for (const did of ex.deliverableIds) relatedIdSet.add(did);
+  }
+
+  for (const sid of sprintByTaskId.values()) {
+    if (sid) relatedIdSet.add(sid);
   }
 
   const titleById = await resolveNotionRelatedPageTitles([...relatedIdSet], token);
@@ -182,10 +225,21 @@ export async function notionRowsToItProjects(rows: unknown[], token: string): Pr
       id: pageId,
       title: titleById.get(pageId) ?? "Sin título",
     })),
-    plannedTasks: ex.taskIds.map((pageId) => ({
-      id: pageId,
-      title: titleById.get(pageId) ?? "Sin título",
-    })),
+    plannedTasks: ex.taskIds.map((pageId) => {
+      const sprintIdLinked = sprintByTaskId.get(pageId);
+      const sprintTitleResolved =
+        sprintIdLinked !== undefined ? (titleById.get(sprintIdLinked) ?? undefined) : undefined;
+      const baseRow = {
+        id: pageId,
+        title: titleById.get(pageId) ?? "Sin título",
+      };
+      if (!sprintIdLinked) return baseRow;
+      return {
+        ...baseRow,
+        sprintId: sprintIdLinked,
+        ...(sprintTitleResolved ? { sprintTitle: sprintTitleResolved } : {}),
+      };
+    }),
     sprints: ex.sprintIds.map((pageId) => ({
       id: pageId,
       title: titleById.get(pageId) ?? "Sin título",

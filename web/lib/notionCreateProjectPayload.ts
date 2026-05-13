@@ -6,6 +6,13 @@ const NOTION_API_VERSION = "2022-06-28";
 /** Mismo rasgo visual cuadrado‑verde que las filas existentes ITAI (`🟩` en Notion). */
 const DEFAULT_NOTION_CREATE_PROJECT_ICON_EMOJI = "❇️";
 
+const DEFAULT_NOTION_CREATE_TASK_ICON_EMOJI = "📌";
+/** Keycap asterisk (*️⃣) — Notion acepta secuencias emoji completas. */
+const DEFAULT_NOTION_CREATE_KR_ICON_EMOJI = "*\uFE0F\u20E3";
+const DEFAULT_NOTION_CREATE_SPRINT_ICON_EMOJI = "🏃";
+
+export type NotionCreateRelatedRowIconKind = "task" | "keyResult" | "sprint";
+
 export function notionRiskToSelectName(level: ItProjectRisk): string {
   if (level === "alto") return "Alta";
   if (level === "medio") return "Media";
@@ -19,7 +26,7 @@ export function notionUrgencyToSelectName(level: ItProjectUrgency): string {
 }
 
 /** Trocea texto para Notion (máx. 2000 caracteres por nodo `text`). */
-function notionRichTextFromPlain(text: string): { type: string; text: { content: string } }[] {
+export function notionRichTextFromPlain(text: string): { type: string; text: { content: string } }[] {
   const segments: { type: string; text: { content: string } }[] = [];
   for (let i = 0; i < text.length; i += 2000) {
     segments.push({ type: "text", text: { content: text.slice(i, i + 2000) } });
@@ -114,16 +121,58 @@ export function notionCreateProjectIconFromEnv(): Record<string, unknown> | unde
   return undefined;
 }
 
+/**
+ * Icono al crear filas en bases hijas (tareas, KRs, sprints). Solo emoji (sin URL externa compartida con proyectos).
+ *
+ * Variables opcionales (cadena vacía = sin icono):
+ * - `NOTION_CREATE_TASK_ICON_EMOJI` (por defecto 📌)
+ * - `NOTION_CREATE_KR_ICON_EMOJI` (por defecto *️⃣)
+ * - `NOTION_CREATE_SPRINT_ICON_EMOJI` (por defecto 🏃; para 🏃‍➡️ u otros, define la variable: algunos ZWJ no los acepta la API)
+ */
+export function notionCreateRelatedRowIconFromEnv(
+  kind: NotionCreateRelatedRowIconKind,
+): Record<string, unknown> | undefined {
+  const envKey =
+    kind === "task"
+      ? "NOTION_CREATE_TASK_ICON_EMOJI"
+      : kind === "keyResult"
+        ? "NOTION_CREATE_KR_ICON_EMOJI"
+        : "NOTION_CREATE_SPRINT_ICON_EMOJI";
+
+  const raw = process.env[envKey];
+  const def =
+    kind === "task"
+      ? DEFAULT_NOTION_CREATE_TASK_ICON_EMOJI
+      : kind === "keyResult"
+        ? DEFAULT_NOTION_CREATE_KR_ICON_EMOJI
+        : DEFAULT_NOTION_CREATE_SPRINT_ICON_EMOJI;
+
+  const emoji = raw === undefined ? def : raw.trim();
+  if (emoji.length === 0) return undefined;
+  return { type: "emoji", emoji };
+}
+
 export async function notionApiCreateDatabasePage(params: {
   databaseId: string;
   token: string;
   properties: Record<string, unknown>;
+  /** Si es true, no envía `icon` (Notion muestra el icono por defecto). Por defecto se usa el mismo emoji/URL que en proyectos (`notionCreateProjectIconFromEnv`). */
+  skipProjectIconEmoji?: boolean;
+  /** Si se indica, icono específico para tarea / KR / sprint (sustituye el emoji de proyecto). Ignorado si `skipProjectIconEmoji`. */
+  relatedRowIcon?: NotionCreateRelatedRowIconKind;
 }): Promise<{ id: string }> {
   const payload: Record<string, unknown> = {
     parent: { database_id: params.databaseId },
     properties: params.properties,
   };
-  const icon = notionCreateProjectIconFromEnv();
+  let icon: Record<string, unknown> | undefined;
+  if (params.skipProjectIconEmoji === true) {
+    icon = undefined;
+  } else if (params.relatedRowIcon) {
+    icon = notionCreateRelatedRowIconFromEnv(params.relatedRowIcon);
+  } else {
+    icon = notionCreateProjectIconFromEnv();
+  }
   if (icon) payload.icon = icon;
 
   const res = await fetch("https://api.notion.com/v1/pages", {
@@ -158,10 +207,27 @@ export async function notionApiCreateDatabasePage(params: {
 }
 
 export function extractNotionErrorMessage(payload: string): string | undefined {
+  const trimmed = payload.trim();
+  if (!trimmed) return undefined;
   try {
-    const o = JSON.parse(payload) as { message?: unknown };
-    return typeof o.message === "string" ? o.message : undefined;
+    const o = JSON.parse(trimmed) as {
+      message?: unknown;
+      code?: unknown;
+    };
+    if (typeof o.message === "string" && o.message.length > 0) {
+      return o.message;
+    }
+    if (Array.isArray(o.message)) {
+      const parts = o.message.map((x) => (typeof x === "string" ? x : JSON.stringify(x)));
+      const joined = parts.filter(Boolean).join(" · ");
+      return joined || undefined;
+    }
+    if (typeof o.code === "string") {
+      const hint = typeof o.message === "string" ? o.message : "";
+      return hint ? `${o.code}: ${hint}` : o.code;
+    }
   } catch {
-    return undefined;
+    return trimmed.length <= 600 ? trimmed : `${trimmed.slice(0, 550)}…`;
   }
+  return undefined;
 }
