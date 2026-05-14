@@ -100,8 +100,12 @@ export function SprintDetailView({ projectId, sprintId }: Props) {
           <span className="font-mono">[ ]</span> pendiente (por defecto), prefijos tipo{" "}
           <span className="font-mono">[~]</span> o «en curso:» para <strong>En curso</strong>, y{" "}
           <span className="font-mono">[x]</span> o ✅ para <strong>Hecho</strong>.
+          <span className="mt-1 block text-slate-600">
+            Puedes <strong>hacer clic en una tarjeta</strong> para abrir el detalle, usar el chequeo «hecha», guardar el
+            título y abrir la fila en Notion si necesitas adjuntar archivos.
+          </span>
         </p>
-        <ItSprintKanbanBoard tasks={tasks} />
+        <ItSprintKanbanBoard tasks={tasks} project={project} />
       </section>
     </div>
   );

@@ -17,6 +17,34 @@ export function inferScopeItemCompletedFromTitle(title: string): boolean {
   return false;
 }
 
+/** Quita prefijos de estado conocidos al inicio del título (repite hasta estabilizar). */
+export function stripLeadingSprintTaskStatusPrefix(raw: string): string {
+  const patterns: RegExp[] = [
+    /^\[\s*[xX]\s*\]\s*/,
+    /^[✅✔☑]\s*/,
+    /^✓(?:\s|$)/u,
+    /^\[[Hh]echo\]\s*/i,
+    /^\[[Dd]one\]\s*/i,
+    /^(completad[oa]|hecho)\s*[:\-.–]\s*/iu,
+    /^[Dd](?:one\s*[:\-.–]|DONE\s*[:\-.–])/iu,
+    /^\[\s*[~\\/]\s*\]\s*/,
+    /^\[\s*\]\s*/,
+    /^(wip|en curso)\s*[:\-.–]\s*/iu,
+    /^[🔄⏳🔶🔷]\s*/u,
+  ];
+
+  let t = raw.trim();
+  let prev = "";
+  while (prev !== t) {
+    prev = t;
+    for (const re of patterns) {
+      t = t.replace(re, "");
+    }
+    t = t.trim();
+  }
+  return t;
+}
+
 /** Columnas del tablero por sprint (misma filosofía que el avance de alcance: convenciones en el título). */
 export type SprintTaskKanbanColumn = "pendiente" | "en_curso" | "hecho";
 
@@ -25,6 +53,29 @@ export const SPRINT_TASK_KANBAN_COLUMN_ORDER: readonly SprintTaskKanbanColumn[] 
   "en_curso",
   "hecho",
 ];
+
+/**
+ * Fija el prefijo del título según la columna del tablero (alineado con `inferSprintTaskKanbanColumn`).
+ */
+export function applySprintTaskTitleForKanbanColumn(
+  title: string,
+  column: SprintTaskKanbanColumn,
+): string {
+  const core = stripLeadingSprintTaskStatusPrefix(title).trim();
+  const max = 2000;
+  if (column === "pendiente") {
+    return core.slice(0, max);
+  }
+  if (column === "en_curso") {
+    return `[~] ${core}`.trim().slice(0, max);
+  }
+  return `[x] ${core}`.trim().slice(0, max);
+}
+
+/** Ajusta el título para reflejar hecho / no hecho (compat. con inferScopeItemCompletedFromTitle). */
+export function applySprintTaskTitleDoneState(title: string, done: boolean): string {
+  return applySprintTaskTitleForKanbanColumn(title, done ? "hecho" : "pendiente");
+}
 
 export function sprintTaskKanbanColumnLabel(col: SprintTaskKanbanColumn): string {
   const map: Record<SprintTaskKanbanColumn, string> = {

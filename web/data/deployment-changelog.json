@@ -6,6 +6,19 @@
   },
   "releases": [
     {
+      "version": "1.21.0",
+      "date": "2026-05-13",
+      "releasedAt": "2026-05-13T18:00:00Z",
+      "changes": [
+        "Sprint — Modal de tarea: estado Pendiente / En curso / Hecho sincronizado con Notion desde el mismo flujo que el título kanbanizado.",
+        "Notion API — Rutas `/api/notion/tasks/[pageId]/files` y `/api/notion/tasks/[pageId]/comments` para adjuntos y hilos de comentarios cuando el token cuenta con permiso.",
+        "Notion UX — Mensajes de error más claros ante permisos insuficientes o capacidades ausentes (`notionPermissionHints` / cabeceras de capacidades donde aplica).",
+        "Portafolio — Drag entre columnas de fase sin asa lateral: `@dnd-kit` con overlay que muestra la tarjeta real (`ItProjectCard` modo fantasma); origen invisible durante drag.",
+        "Portafolio — Cambio de fase optimista en el cliente al soltar; PATCH Notion asíncrono con rollback y banner de error si la API rechaza.",
+        "Portafolio — Sin animación de drop en overlay para sensación más directa tras soltar."
+      ]
+    },
+    {
       "version": "1.20.0",
       "date": "2026-05-12",
       "releasedAt": "2026-05-12T18:00:00Z",

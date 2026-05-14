@@ -38,7 +38,6 @@ function UrgencyIcon({ urgency }: { urgency: ItProject["urgencyLevel"] }) {
       </svg>
     );
   }
-  // baja or fallback
   return (
     <svg className="h-5 w-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
       <path d="m7 13 5 5 5-5M7 6l5 5 5-5"/>
@@ -59,21 +58,11 @@ function progressBarClass(risk: ItProjectRisk): string {
   return "bg-sky-500";
 }
 
-type Props = {
-  project: ItProject;
-  /** En Kanban la columna ya indica la fase; en tabla se muestra acento en la tarjeta. */
-  phaseBorderOnCard: boolean;
-};
-
-export function ItProjectCard({ project: p, phaseBorderOnCard }: Props) {
+function ProjectCardBody({ p, phaseBorderOnCard }: { p: ItProject; phaseBorderOnCard: boolean }) {
   const pct = milestoneProgressPct(p);
-  const phaseBorder = phaseBorderOnCard ? `${itPhaseTopBorderClass(p.phase)} border-t-4` : "";
 
   return (
-    <Link
-      href={`/proyectos/${p.id}`}
-      className={`block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-sm ${phaseBorder}`}
-    >
+    <>
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-bold text-slate-900">{p.name}</h3>
         <UrgencyIcon urgency={p.urgencyLevel} />
@@ -109,6 +98,41 @@ export function ItProjectCard({ project: p, phaseBorderOnCard }: Props) {
           {p.pmName}
         </span>
       </div>
+    </>
+  );
+}
+
+type Props = {
+  project: ItProject;
+  /** En Kanban la columna ya indica la fase; en tabla se muestra acento en la tarjeta. */
+  phaseBorderOnCard: boolean;
+  /** Vista flotante al arrastrar (misma apariencia, sin navegación) */
+  renderMode?: "link" | "dragGhost";
+};
+
+export function ItProjectCard({ project: p, phaseBorderOnCard, renderMode = "link" }: Props) {
+  const phaseBorder = phaseBorderOnCard ? `${itPhaseTopBorderClass(p.phase)} border-t-4` : "";
+
+  const linkSurface =
+    "block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-sm";
+
+  if (renderMode === "dragGhost") {
+    return (
+      <div
+        role="presentation"
+        className={`block w-80 max-w-[calc(100vw-1.5rem)] cursor-grabbing rounded-xl border border-slate-200 bg-white p-4 shadow-2xl ring-2 ring-sky-400/40 ${phaseBorder}`}
+      >
+        <ProjectCardBody p={p} phaseBorderOnCard={phaseBorderOnCard} />
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/proyectos/${encodeURIComponent(p.id)}`}
+      className={`${linkSurface} ${phaseBorder}`}
+    >
+      <ProjectCardBody p={p} phaseBorderOnCard={phaseBorderOnCard} />
     </Link>
   );
 }

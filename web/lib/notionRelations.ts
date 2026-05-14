@@ -151,6 +151,27 @@ export function notionApiJsonHeaders(token: string): NotionHeaders {
   };
 }
 
+/** File uploads, comentarios y bloques con `file_upload` requieren una versión más reciente según documentación Notion. */
+export function notionApiCapabilitiesVersion(): string {
+  return process.env.NOTION_API_CAPABILITIES_VERSION?.trim() ?? "2026-03-11";
+}
+
+export function notionApiJsonHeadersCapabilities(token: string): NotionHeaders {
+  return {
+    Authorization: `Bearer ${token}`,
+    "Notion-Version": notionApiCapabilitiesVersion(),
+    "Content-Type": "application/json",
+  };
+}
+
+/** Peticiones `multipart/form-data` a Notion (p. ej. enviar binario del file upload): no fijar Content-Type. */
+export function notionApiAuthHeadersCapabilitiesOnly(token: string): NotionHeaders {
+  return {
+    Authorization: `Bearer ${token}`,
+    "Notion-Version": notionApiCapabilitiesVersion(),
+  };
+}
+
 function notionHeaders(token: string): NotionHeaders {
   return notionApiJsonHeaders(token);
 }

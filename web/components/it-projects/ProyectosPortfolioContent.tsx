@@ -178,7 +178,11 @@ export function ProyectosPortfolioContent() {
             {displayProjects.length === 1 ? "proyecto" : "proyectos"}
           </p>
 
-          <ItProjectsKanbanBoard projects={displayProjects} columnPhases={kanbanColumnPhases} />
+          <ItProjectsKanbanBoard
+            projects={displayProjects}
+            columnPhases={kanbanColumnPhases}
+            phaseDragAllowed={canEdit === true && fase === "" && kanbanColumnPhases.length > 1}
+          />
         </>
       ) : null}
     </div>

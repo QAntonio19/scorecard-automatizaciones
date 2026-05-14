@@ -111,6 +111,71 @@ export function mergePlannedTaskDescriptionsFromRows(
   };
 }
 
+/** Cuerpo mínimo coherente con PATCH `/api/notion/projects/[id]` al cambiar sólo una tarea (incluye todas las líneas para no romper relations). */
+export type NotionProjectPersistBodyFromClient = {
+  name: string;
+  description?: string;
+  phase: ItProject["phase"];
+  riskLevel: ItProject["riskLevel"];
+  urgencyLevel?: ItProject["urgencyLevel"];
+  pmNames?: string[];
+  taskLines: NotionTaskLinePatchBody[];
+};
+
+export function pmNameFieldToPmNames(pmName: string | undefined): string[] {
+  const t = pmName?.trim() ?? "";
+  if (!t || t === "—") return [];
+  return t
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+export function buildNotionPersistBodyUpdatingOneTaskTitle(
+  project: ItProject,
+  taskId: string,
+  nextTaskTitle: string,
+): NotionProjectPersistBodyFromClient {
+  const text = nextTaskTitle.trim().slice(0, 2000);
+  const taskLines: NotionTaskLinePatchBody[] = project.plannedTasks.map((t) => {
+    const lineText = t.id === taskId ? text : t.title.trim().slice(0, 2000);
+    const body: NotionTaskLinePatchBody = { id: t.id, text: lineText };
+    const sid = t.sprintId?.trim() ?? "";
+    if (sid && isLikelyNotionPageId(sid)) {
+      body.sprintId = sid;
+    }
+    return body;
+  });
+
+  return {
+    name: project.name.trim().slice(0, 2000),
+    description: project.description?.trim().slice(0, 16_000),
+    phase: project.phase,
+    riskLevel: project.riskLevel,
+    urgencyLevel: project.urgencyLevel ?? "media",
+    pmNames: pmNameFieldToPmNames(project.pmName),
+    taskLines,
+  };
+}
+
+/** PATCH Notion sólo cambiando fase (sin tocar relation slices). `taskLines` omitido por diseño. */
+export function buildNotionPatchBodyPhaseOnly(
+  project: ItProject,
+  nextPhase: ItProject["phase"],
+): Pick<
+  NotionProjectPersistBodyFromClient,
+  "name" | "description" | "phase" | "riskLevel" | "urgencyLevel" | "pmNames"
+> {
+  return {
+    name: project.name.trim().slice(0, 2000),
+    description: project.description?.trim().slice(0, 16_000),
+    phase: nextPhase,
+    riskLevel: project.riskLevel,
+    urgencyLevel: project.urgencyLevel ?? "media",
+    pmNames: pmNameFieldToPmNames(project.pmName),
+  };
+}
+
 /**
  * Tras PATCH Notion, la API puede devolver el proyecto sin descripción si falta la propiedad en Notion o el env
  * `NOTION_PROP_PROJECT_DESCRIPTION`. Mantiene en caché el texto del formulario para que la vista detalle lo muestre.

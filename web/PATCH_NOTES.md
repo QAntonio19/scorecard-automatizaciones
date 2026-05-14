@@ -1,3 +1,27 @@
+# Patch Notes v1.21.0 — "Sprint vivo en Notion · Kanban de portafolio sin fricción"
+
+## Resumen de la versión
+El tablero de sprint gana **detalle modal** con estado **Pendiente / En curso / Hecho**, **subida de archivos** y **comentarios** contra Notion; los errores de la API muestran **pistas claras en español** cuando faltan permisos u otras capacidades. En el portafolio, el **arrastre entre fases** se siente estable: vista de arrastre igual a la tarjeta real con **overlay**, cambio de columna **al instante** (optimista) y reversión si falla el guardado.
+
+---
+
+## Sprint y Notion (tareas)
+- **Modal de tarea**: select de estado; el guardado replica el protocolo ya usado para el texto del título en el Kanban.
+- **Archivos**: ruta **`POST`/listado `GET`** bajo `/api/notion/tasks/[pageId]/files`; cabeceras y capacidades alineadas con la integración existente de Notion.
+- **Comentarios**: **`POST`/listado `GET`** bajo `/api/notion/tasks/[pageId]/comments` para crear y leer comentarios de página cuando la token lo permite.
+- **Errores**: mensajes más útiles ante *Insufficient permissions* u otros rechazos (qué revisar en la integración/conexión).
+
+## Portafolio — Kanban de fases
+- **Drag and drop**: toda la tarjeta es zona de arrastre (`@dnd-kit`); **`DragOverlay`** muestra una copia visual de **`ItProjectCard`** (sin mini-resumen ficticio).
+- **Soltado instantáneo**: actualización optimista de fase en UI; PATCH a Notion o store local **después**, con rollback y aviso si falla.
+- **Sin animación de “snap”**: `dropAnimation` desactivado en el overlay para un cierre inmediato del arrastre.
+
+---
+
+*Registrado el 13 de mayo de 2026.*
+
+---
+
 # Patch Notes v1.20.0 — "Notion en profundidad · Alta completa y lista al día"
 
 ## Resumen de la versión
