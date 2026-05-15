@@ -377,8 +377,13 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
           <dl className="space-y-4 text-sm mt-5">
             <div className="flex justify-between items-center gap-4 border-b border-slate-50 pb-3">
               <dt className="text-slate-500 font-medium">Mes / Año</dt>
-              <dd className="font-semibold text-slate-900 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                {p.month || "—"} {p.year ? `/ ${p.year}` : ""}
+              <dd className="font-semibold text-slate-900 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 capitalize">
+                {(() => {
+                  const d = new Date(p.startDate);
+                  return isNaN(d.getTime()) 
+                    ? "—" 
+                    : d.toLocaleDateString("es-MX", { month: "long", year: "numeric" }).replace(" de ", " / ");
+                })()}
               </dd>
             </div>
             <div className="flex justify-between items-center gap-4 border-b border-slate-50 pb-3">
