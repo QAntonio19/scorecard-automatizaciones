@@ -108,9 +108,9 @@ export function mergePlannedTaskDescriptionsFromRows(
     ...project,
     plannedTasks: project.plannedTasks.map((t) => {
       const row = rowById.get(t.id);
-      const trimmedDesc = row.description?.trim() ?? "";
-      const trimmedAssignee = row.assigneeName?.trim() ?? "";
-      const trimmedDate = row.targetDate?.trim() ?? "";
+      const trimmedDesc = row?.description?.trim() ?? "";
+      const trimmedAssignee = row?.assigneeName?.trim() ?? "";
+      const trimmedDate = row?.targetDate?.trim() ?? "";
       const next = { ...t };
       
       if (!trimmedDesc) delete next.description;
