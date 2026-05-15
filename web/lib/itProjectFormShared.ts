@@ -176,8 +176,6 @@ export function buildNotionPersistBodyUpdatingOneSprintTask(
     riskLevel: project.riskLevel,
     urgencyLevel: project.urgencyLevel ?? "media",
     pmNames: pmNameFieldToPmNames(project.pmName),
-    month: project.month,
-    year: project.year,
     taskLines,
   };
 }
