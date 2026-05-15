@@ -70,6 +70,8 @@ export function EditItProjectForm({ initialProject }: Props) {
         row.sprintLabelHint = t.sprintTitle.trim();
       }
       if (t.description?.trim()) row.description = t.description.trim();
+      if (t.assigneeName?.trim()) row.assigneeName = t.assigneeName.trim();
+      if (t.targetDate?.trim()) row.targetDate = t.targetDate.trim();
       return row;
     }),
   );
@@ -165,6 +167,8 @@ export function EditItProjectForm({ initialProject }: Props) {
             riskLevel: riskSel,
             urgencyLevel: urgencySel,
             pmNames: pmNames.length > 0 ? pmNames : [],
+            startDate,
+            targetEndDate,
             keyResultLines: keyResultLines.map((row) => ({ id: row.id, text: row.text.trim() })),
             taskLines: buildNotionTaskLinePatchBodies(taskLines, notionOriginSprintByTaskId),
             sprintRows: sprintRowsForSave.map((row) => ({
@@ -212,13 +216,19 @@ export function EditItProjectForm({ initialProject }: Props) {
         targetEndDate: targetEndDate || "—",
         riskLevel: riskSel,
         urgencyLevel: urgencySel,
+        month: month.trim(),
+        year: year.trim(),
         keyResults: keyResultLines.map((row) => ({ id: row.id, title: row.text })),
         plannedTasks: taskLines.map((row) => {
           const title = row.text.trim();
           const sid = row.sprintRowId?.trim();
           const desc = row.description?.trim();
+          const assigneeName = row.assigneeName?.trim();
+          const targetDate = row.targetDate?.trim();
           let planned: (typeof nextProject)["plannedTasks"][number] = { id: row.id, title };
           if (desc) planned = { ...planned, description: desc };
+          if (assigneeName) planned = { ...planned, assigneeName };
+          if (targetDate) planned = { ...planned, targetDate };
           if (!sid || !isLikelyNotionPageId(sid)) return planned;
           const sp = sprintRowsForSave.find((s) => s.id === sid);
           return {
@@ -251,7 +261,7 @@ export function EditItProjectForm({ initialProject }: Props) {
       formIdPrefix={`itp-edit-${initialProject.id.slice(0, 8)}`}
       heading="Editar proyecto"
       mutateSecondaryWrites={true}
-      datesEditable={!isNotion}
+      datesEditable={true}
       name={name}
       setName={setName}
       description={description}

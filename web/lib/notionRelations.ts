@@ -1,3 +1,7 @@
+import type { ItSprintTaskBoardColumn } from "@/lib/itProjectTypes";
+import { notionTaskBoardStatusPropertyLabel } from "@/lib/notionTaskBoardStatusEnv";
+import { extractResponsableFromNotionProps } from "./notionProjectResponsable";
+
 const NOTION_VERSION = "2022-06-28";
 
 function isRecord(x: unknown): x is Record<string, unknown> {
@@ -25,6 +29,14 @@ function findPropertyKey(props: Record<string, unknown>, name: string): string |
     if (k.toLowerCase() === lower) return k;
   }
   return undefined;
+}
+
+/** Resuelve el nombre de columna en `properties` de una página Notion (insensible a mayúsculas). */
+export function findNotionPagePropertyKey(
+  props: Record<string, unknown>,
+  name: string,
+): string | undefined {
+  return findPropertyKey(props, name);
 }
 
 /**
@@ -81,46 +93,6 @@ function looksLikeNotionPageId(id: string): boolean {
 
 const TASK_SPRINT_FETCH_CONCURRENCY = 15;
 
-/** Primera página sprint enlazada desde cada página de tarea según GET de propiedades. */
-export async function resolveTaskLinkedFirstSprintIds(
-  taskPageIds: readonly string[],
-  token: string,
-): Promise<Map<string, string | undefined>> {
-  const unique = [...new Set(taskPageIds.filter((id) => looksLikeNotionPageId(id)))];
-  const map = new Map<string, string | undefined>();
-  const cands = notionTaskPageSprintRelationCandidates();
-
-  const fetchOne = async (tid: string): Promise<void> => {
-    try {
-      const res = await fetch(`https://api.notion.com/v1/pages/${encodeURIComponent(tid)}`, {
-        headers: notionApiJsonHeaders(token),
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        map.set(tid, undefined);
-        return;
-      }
-      const page: unknown = await res.json();
-      if (!isRecord(page)) {
-        map.set(tid, undefined);
-        return;
-      }
-      const props = page.properties;
-      const ids = relationIdsFromCandidates(isRecord(props) ? props : undefined, cands);
-      map.set(tid, ids[0]);
-    } catch {
-      map.set(tid, undefined);
-    }
-  };
-
-  for (let i = 0; i < unique.length; i += TASK_SPRINT_FETCH_CONCURRENCY) {
-    const chunk = unique.slice(i, i + TASK_SPRINT_FETCH_CONCURRENCY);
-    await Promise.all(chunk.map(fetchOne));
-  }
-
-  return map;
-}
-
 /** Título de una página de base de datos: primera propiedad tipo `title`. */
 export function titleFromNotionPagePayload(page: unknown): string {
   if (!isRecord(page)) return "Sin título";
@@ -138,6 +110,116 @@ export function titleFromNotionPagePayload(page: unknown): string {
     if (text) return text;
   }
   return "Sin título";
+}
+
+function mapNotionBoardLabelToColumn(name: string): ItSprintTaskBoardColumn | undefined {
+  const n = name.trim().toLowerCase();
+  if (!n) return undefined;
+  if (/hecho|completad|done|cerrad|finalizad|✅/.test(n)) return "hecho";
+  if (/curso|progres|wip|doing|en proceso|trabaj/.test(n)) return "en_curso";
+  if (/pendient|sin empezar|por hacer|por empezar|todo|backlog|inbox|nueva/.test(n)) return "pendiente";
+  return undefined;
+}
+
+function readBoardColumnFromTaskProperties(
+  props: Record<string, unknown> | undefined,
+): ItSprintTaskBoardColumn | undefined {
+  const propLabel = notionTaskBoardStatusPropertyLabel();
+  if (!propLabel || !props) return undefined;
+  const key = findPropertyKey(props, propLabel);
+  if (!key) return undefined;
+  const cell = props[key];
+  if (!isRecord(cell)) return undefined;
+  if (cell.type === "status") {
+    const nm = (cell.status as { name?: string } | undefined)?.name;
+    return typeof nm === "string" ? mapNotionBoardLabelToColumn(nm) : undefined;
+  }
+  if (cell.type === "select") {
+    const nm = (cell.select as { name?: string } | undefined)?.name;
+    return typeof nm === "string" ? mapNotionBoardLabelToColumn(nm) : undefined;
+  }
+  return undefined;
+}
+
+export function extractDateFromNotionProps(
+  props: Record<string, unknown> | undefined,
+  candidates: string[],
+): string | undefined {
+  if (!props) return undefined;
+  for (const name of candidates) {
+    const key = findPropertyKey(props, name);
+    if (!key) continue;
+    const cell = props[key];
+    if (!isRecord(cell)) continue;
+    if (cell.type === "date" && isRecord(cell.date) && typeof cell.date.start === "string") {
+      return cell.date.start;
+    }
+  }
+  return undefined;
+}
+
+/** Datos leídos en un solo GET de la página-tarea (sprint, estado tablero opcional, título). */
+export type TaskPagePeek = {
+  sprintId?: string;
+  notionBoardColumn?: ItSprintTaskBoardColumn;
+  plainTitle: string;
+  assigneeName?: string;
+  targetDate?: string;
+};
+
+/** GET por página de tarea: relación sprint, columna Kanban (propiedad `Estatus` por defecto o `NOTION_PROP_TASK_BOARD_STATUS`) y texto del título. */
+export async function resolveTaskPagePeek(
+  taskPageIds: readonly string[],
+  token: string,
+): Promise<Map<string, TaskPagePeek>> {
+  const unique = [...new Set(taskPageIds.filter((id) => looksLikeNotionPageId(id)))];
+  const map = new Map<string, TaskPagePeek>();
+  const cands = notionTaskPageSprintRelationCandidates();
+
+  const fetchOne = async (tid: string): Promise<void> => {
+    try {
+      const res = await fetch(`https://api.notion.com/v1/pages/${encodeURIComponent(tid)}`, {
+        headers: notionApiJsonHeaders(token),
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const page: unknown = await res.json();
+      if (!isRecord(page)) return;
+      const props = isRecord(page.properties) ? page.properties : undefined;
+      const ids = relationIdsFromCandidates(props, cands);
+      
+      const assignee = extractResponsableFromNotionProps(props);
+      const date = extractDateFromNotionProps(props, ["Fecha de entrega", "Fecha límite", "Fecha", "Due Date", "Target Date"]);
+
+      map.set(tid, {
+        sprintId: ids[0],
+        notionBoardColumn: readBoardColumnFromTaskProperties(props),
+        plainTitle: titleFromNotionPagePayload(page),
+        assigneeName: assignee,
+        targetDate: date,
+      });
+    } catch {
+      // no-op: preserve previous data by not setting anything
+    }
+  };
+
+  for (let i = 0; i < unique.length; i += TASK_SPRINT_FETCH_CONCURRENCY) {
+    const chunk = unique.slice(i, i + TASK_SPRINT_FETCH_CONCURRENCY);
+    await Promise.all(chunk.map(fetchOne));
+  }
+
+  return map;
+}
+
+/** Primera página sprint enlazada desde cada página de tarea según GET de propiedades. */
+export async function resolveTaskLinkedFirstSprintIds(
+  taskPageIds: readonly string[],
+  token: string,
+): Promise<Map<string, string | undefined>> {
+  const peek = await resolveTaskPagePeek(taskPageIds, token);
+  const map = new Map<string, string | undefined>();
+  peek.forEach((v, k) => map.set(k, v.sprintId));
+  return map;
 }
 
 type NotionHeaders = Record<string, string>;

@@ -48,6 +48,34 @@ function rememberNotionProjectDescriptionOverlay(project: ItProject): void {
   writeNotionDescriptionOverlayMap(map);
 }
 
+/** Conserva `sprintBoardColumn` en refetch cuando el listado aún no hidrata esa propiedad desde Notion. */
+function mergePlannedTasksPreserveSprintBoard(prev: ItProject, next: ItProject): ItProject {
+  if (!isLikelyNotionPageId(next.id) || prev.plannedTasks.length === 0) return next;
+  const prevById = new Map(prev.plannedTasks.map((t) => [t.id, t]));
+  return {
+    ...next,
+    plannedTasks: next.plannedTasks.map((t) => {
+      if (t.sprintBoardColumn !== undefined && t.description !== undefined && t.assigneeName !== undefined && t.targetDate !== undefined) return t;
+      const pv = prevById.get(t.id);
+      if (!pv) return t;
+      let nextT = t;
+      if (nextT.sprintBoardColumn === undefined && pv.sprintBoardColumn !== undefined) {
+        nextT = { ...nextT, sprintBoardColumn: pv.sprintBoardColumn };
+      }
+      if (nextT.description === undefined && pv.description !== undefined) {
+        nextT = { ...nextT, description: pv.description };
+      }
+      if (nextT.assigneeName === undefined && pv.assigneeName !== undefined) {
+        nextT = { ...nextT, assigneeName: pv.assigneeName };
+      }
+      if (nextT.targetDate === undefined && pv.targetDate !== undefined) {
+        nextT = { ...nextT, targetDate: pv.targetDate };
+      }
+      return nextT;
+    }),
+  };
+}
+
 /**
  * Cuando la API devuelve proyectos sin descripción (columna ausente en Notion o lista incompleta),
  * conserva la descripción que ya teníamos en caché o en el overlay local.
@@ -60,25 +88,31 @@ export function mergeNotionProjectsPreserveLocalDescriptions(
   const overlay = readNotionDescriptionOverlayMap();
 
   return incoming.map((p) => {
-    if (!isLikelyNotionPageId(p.id)) return p;
-
-    const incD = (p.description ?? "").trim();
-    const incEmpty = incD === "" || incD === "—";
-    if (!incEmpty) return p;
-
     const old = prevById.get(p.id);
-    const oldD = (old?.description ?? "").trim();
-    const oldRich = oldD !== "" && oldD !== "—";
-    if (oldRich) {
-      return { ...p, description: old!.description };
+    let next = p;
+
+    if (isLikelyNotionPageId(p.id)) {
+      const incD = (p.description ?? "").trim();
+      const incEmpty = incD === "" || incD === "—";
+      if (incEmpty) {
+        const oldD = (old?.description ?? "").trim();
+        const oldRich = oldD !== "" && oldD !== "—";
+        if (oldRich) {
+          next = { ...p, description: old!.description };
+        } else {
+          const fromOverlay = overlay[p.id]?.trim() ?? "";
+          if (fromOverlay !== "" && fromOverlay !== "—") {
+            next = { ...p, description: fromOverlay };
+          }
+        }
+      }
     }
 
-    const fromOverlay = overlay[p.id]?.trim() ?? "";
-    if (fromOverlay !== "" && fromOverlay !== "—") {
-      return { ...p, description: fromOverlay };
+    if (old && isLikelyNotionPageId(next.id)) {
+      next = mergePlannedTasksPreserveSprintBoard(old, next);
     }
 
-    return p;
+    return next;
   });
 }
 
@@ -154,9 +188,18 @@ function sanitizePlannedTasks(raw: unknown): ItProject["plannedTasks"] {
     const descriptionRaw = typeof row.description === "string" ? row.description.trim() : "";
 
     const outRow: ItProject["plannedTasks"][number] = { id, title };
-    if (descriptionRaw) outRow.description = descriptionRaw;
     if (sprintIdRaw) outRow.sprintId = sprintIdRaw;
     if (sprintTitleRaw) outRow.sprintTitle = sprintTitleRaw;
+    if (
+      row.sprintBoardColumn === "pendiente" ||
+      row.sprintBoardColumn === "en_curso" ||
+      row.sprintBoardColumn === "hecho"
+    ) {
+      outRow.sprintBoardColumn = row.sprintBoardColumn;
+    }
+    if (descriptionRaw) outRow.description = descriptionRaw;
+    if (typeof row.assigneeName === "string") outRow.assigneeName = row.assigneeName.trim();
+    if (typeof row.targetDate === "string") outRow.targetDate = row.targetDate.trim();
     out.push(outRow);
   }
   return out;

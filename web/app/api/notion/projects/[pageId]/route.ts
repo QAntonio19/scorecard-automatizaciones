@@ -17,6 +17,7 @@ import {
 } from "@/lib/notionProjectRelationsSync";
 import { notionApiJsonHeaders } from "@/lib/notionRelations";
 import { syncNotionProjectPageBodyFromPlainBestEffort } from "@/lib/notionProjectPageBodySync";
+import { resolveProjectPeriodRelations } from "@/lib/notionPeriodSync";
 
 export const revalidate = 0;
 export const runtime = "nodejs";
@@ -43,6 +44,9 @@ const taskLinePatchSchema = z.object({
       z.null(),
     ])
     .optional(),
+  sprintBoardColumn: z.enum(["pendiente", "en_curso", "hecho"]).optional(),
+  assigneeName: z.string().max(500).optional(),
+  targetDate: z.string().max(120).optional(),
 });
 
 const sprintRowPatchSchema = z.object({
@@ -64,6 +68,8 @@ const patchFullBodySchema = z.object({
   riskLevel: z.enum(["bajo", "medio", "alto"]),
   urgencyLevel: z.enum(["baja", "media", "alta"]).optional(),
   pmNames: z.array(z.string().max(500)).max(32).optional(),
+  startDate: z.string().max(120).optional(),
+  targetEndDate: z.string().max(120).optional(),
   keyResultLines: z.array(krLineSchema).max(250).optional(),
   taskLines: z.array(taskLinePatchSchema).max(800).optional(),
   sprintRows: z.array(sprintRowPatchSchema).max(160).optional(),
@@ -163,7 +169,33 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
       riskLevel: dto.riskLevel as ItProjectRisk,
       urgencyLevel: (dto.urgencyLevel ?? "media") as ItProjectUrgency,
       pmNames: dto.pmNames,
+      startDate: dto.startDate,
+      targetEndDate: dto.targetEndDate,
     });
+
+    // 1. Resolver Relaciones de Periodo (Meses/Años) automáticas
+    const periodProps: Record<string, any> = {};
+    let monthIdForTasks: string | undefined = undefined;
+    if (dto.startDate) {
+      try {
+        const { monthId, yearId } = await resolveProjectPeriodRelations({
+          token,
+          startDateIso: dto.startDate,
+        });
+        if (monthId) {
+          periodProps["meses"] = { relation: [{ id: monthId }] };
+          monthIdForTasks = monthId;
+        }
+        if (yearId) periodProps["años"] = { relation: [{ id: yearId }] };
+      } catch (err) {
+        console.error("Error resolviendo periodo (meses/años):", err);
+      }
+    }
+
+    // Si no cambió la fecha pero el proyecto ya tiene mes, lo recuperamos para las tareas
+    if (!monthIdForTasks && existing.monthId) {
+      monthIdForTasks = existing.monthId;
+    }
 
     let relationProps: Record<string, unknown> = {};
     if (Object.keys(relationSlice).length > 0) {
@@ -173,10 +205,11 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
         projectPageId: pageId,
         projectProperties: pageProps,
         input: relationSlice,
+        monthId: monthIdForTasks,
       });
     }
 
-    const properties = { ...propertiesCore, ...relationProps };
+    const properties = { ...propertiesCore, ...periodProps, ...relationProps };
 
     const notionRes = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
       method: "PATCH",

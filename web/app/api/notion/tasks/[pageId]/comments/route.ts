@@ -17,8 +17,8 @@ const postBodySchema = z.object({
 });
 
 const COMMENTS_FORBIDDEN_HINT =
-  "Notion devolvió 403 al leer o escribir comentarios. En el portal del desarrollador, activa en la integración las " +
-  "capacidades de **leer comentarios** y **insertar comentarios** y vuelve a compartir la base o página.";
+  "Notion devolvió 403 al leer o escribir comentarios. En Developers → tu integración, activa **«Leer comentarios»** y **«Insertar comentarios»** " +
+  "y conecta la página de la tarea a esa integración (menú ⋮ → Conexiones).";
 
 export async function GET(_request: Request, ctx: RouteCtx) {
   const { pageId: raw } = await ctx.params;

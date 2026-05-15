@@ -13,6 +13,8 @@ export interface NotionProjectFullPatchDto {
   riskLevel: ItProjectRisk;
   urgencyLevel: ItProjectUrgency;
   pmNames?: readonly string[];
+  startDate?: string;
+  targetEndDate?: string;
 }
 
 /**
@@ -68,6 +70,11 @@ export function buildNotionPatchPropertiesFull(dto: NotionProjectFullPatchDto): 
       multi_select: [],
     };
   }
+
+  // Nota: INICIO, FIN OBJETIVO, meses y años son relaciones o no existen en el esquema detectado.
+  // Para evitar errores de validación (400), dejamos de enviarlos por ahora.
+  // Si el usuario crea las columnas de tipo Fecha/Select con estos nombres, 
+  // se podrían reactivar aquí.
 
   return props;
 }

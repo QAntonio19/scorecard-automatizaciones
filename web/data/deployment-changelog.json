@@ -6,6 +6,18 @@
   },
   "releases": [
     {
+      "version": "1.22.0",
+      "date": "2026-05-14",
+      "releasedAt": "2026-05-14T21:00:00Z",
+      "changes": [
+        "Notion — Sincronización de Periodos: automatización total de creación y vínculo de Meses y Años (ej: «Mayo 2026») basada en la fecha de inicio del proyecto.",
+        "Notion — Relaciones de Tareas: propagación automática del ID del Mes a cada tarea individual, permitiendo su seguimiento en la base de datos de control de tareas ITAI.",
+        "Notion — Lógica de Unicidad: búsqueda de periodos sensible al contexto del año para evitar duplicados y asegurar la integridad referencial en Notion.",
+        "UI Proyectos — Barra de progreso en tarjetas: motor de cálculo actualizado que suma KRs, Tareas y Sprints (antes solo hitos); visualización del conteo de ítems y porcentaje real.",
+        "API Notion — Estabilización: eliminación de intentos de escritura en propiedades de solo lectura o inexistentes, resolviendo errores de validación (400) en el guardado."
+      ]
+    },
+    {
       "version": "1.21.0",
       "date": "2026-05-13",
       "releasedAt": "2026-05-13T18:00:00Z",

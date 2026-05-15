@@ -1,9 +1,13 @@
 import Link from "next/link";
-import type { ItProject, ItProjectRisk } from "@/lib/itProjectTypes";
+import type { ItProject } from "@/lib/itProjectTypes";
 import {
   itPhaseTopBorderClass,
   phaseLabel,
 } from "@/lib/itProjectPortfolio";
+import { 
+  computeProjectScopeProgress, 
+  projectScopeProgressFillClass 
+} from "@/lib/itProjectScopeProgress";
 
 const MONTHS = [
   "Ene", "Feb", "Mar", "Abr", "May", "Jun",
@@ -45,21 +49,8 @@ function UrgencyIcon({ urgency }: { urgency: ItProject["urgencyLevel"] }) {
   );
 }
 
-function milestoneProgressPct(p: ItProject): number {
-  const n = p.milestones.length;
-  if (n === 0) return 0;
-  const done = p.milestones.filter((m) => m.done).length;
-  return (done / n) * 100;
-}
-
-function progressBarClass(risk: ItProjectRisk): string {
-  if (risk === "alto") return "bg-rose-400";
-  if (risk === "medio") return "bg-amber-300";
-  return "bg-sky-500";
-}
-
 function ProjectCardBody({ p, phaseBorderOnCard }: { p: ItProject; phaseBorderOnCard: boolean }) {
-  const pct = milestoneProgressPct(p);
+  const { completed, total, percent } = computeProjectScopeProgress(p);
 
   return (
     <>
@@ -68,21 +59,27 @@ function ProjectCardBody({ p, phaseBorderOnCard }: { p: ItProject; phaseBorderOn
         <UrgencyIcon urgency={p.urgencyLevel} />
       </div>
       <p className="mt-2 line-clamp-2 text-xs text-slate-600">{p.description}</p>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div
-          className={`h-full rounded-full ${progressBarClass(p.riskLevel)}`}
-          style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+          className={`h-full rounded-full transition-all duration-500 ease-out ${projectScopeProgressFillClass(percent)}`}
+          style={{ width: `${percent}%` }}
         />
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
-        <span className="font-semibold text-slate-600">
-          {p.milestones.length} {p.milestones.length === 1 ? "paso" : "pasos"}
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+        <span className="font-semibold text-slate-700">
+          {completed} de {total} {total === 1 ? "ítem" : "ítems"}
         </span>
         <span className="text-slate-300">·</span>
         <span>
           {formatMonthYear(p.startDate)} → {formatMonthYear(p.targetEndDate)}
         </span>
+        {percent > 0 && (
+          <>
+            <span className="text-slate-300">·</span>
+            <span className="font-bold text-slate-900">{percent}%</span>
+          </>
+        )}
       </div>
 
       {phaseBorderOnCard && (
@@ -114,7 +111,7 @@ export function ItProjectCard({ project: p, phaseBorderOnCard, renderMode = "lin
   const phaseBorder = phaseBorderOnCard ? `${itPhaseTopBorderClass(p.phase)} border-t-4` : "";
 
   const linkSurface =
-    "block cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-sm";
+    "block cursor-pointer rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-indigo-200 hover:shadow-md hover:ring-1 hover:ring-indigo-50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-sm";
 
   if (renderMode === "dragGhost") {
     return (

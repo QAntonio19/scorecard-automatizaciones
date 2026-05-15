@@ -143,10 +143,14 @@ export function CreateItProjectForm() {
       plannedTasks: taskLines.map((row) => {
         const sid = row.sprintRowId?.trim();
         const desc = row.description?.trim();
+        const assigneeName = row.assigneeName?.trim();
+        const targetDate = row.targetDate?.trim();
         const planned: ItProject["plannedTasks"][number] = {
           id: row.id,
           title: row.text,
           ...(desc ? { description: desc } : {}),
+          ...(assigneeName ? { assigneeName } : {}),
+          ...(targetDate ? { targetDate } : {}),
         };
         if (!sid || !isLikelyNotionPageId(sid)) return planned;
         const sp = sprintRowsForSave.find((s) => s.id === sid);
@@ -176,6 +180,8 @@ export function CreateItProjectForm() {
           riskLevel: project.riskLevel,
           urgencyLevel: project.urgencyLevel,
           pmNames: pmNames.length > 0 ? pmNames : undefined,
+          startDate: startDate || undefined,
+          targetEndDate: targetEndDate || undefined,
           ...(keyResultLines.length > 0
             ? { keyResultLines: keyResultLines.map((row) => ({ id: row.id, text: row.text.trim() })) }
             : {}),

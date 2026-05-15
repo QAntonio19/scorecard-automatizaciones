@@ -4,7 +4,7 @@
 
 import type { FormStyledSelectOption } from "@/components/ui/FormStyledSelect";
 import { IT_PROJECT_PHASE_ORDER, phaseLabel } from "@/lib/itProjectPortfolio";
-import type { ItProject, ItProjectRisk, ItProjectUrgency } from "@/lib/itProjectTypes";
+import type { ItProject, ItProjectRisk, ItProjectUrgency, ItSprintTaskBoardColumn } from "@/lib/itProjectTypes";
 import { isLikelyNotionPageId } from "@/lib/notionProjectFromPage";
 
 export const IT_PROJECT_PHASE_SELECT_OPTIONS = IT_PROJECT_PHASE_ORDER.map((ph) => ({
@@ -29,6 +29,29 @@ export const RISK_OPTIONS_WITH_PLACEHOLDER: FormStyledSelectOption<string>[] = [
   ...IT_PROJECT_RISK_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
 ];
 
+export const IT_PROJECT_MONTH_OPTIONS: FormStyledSelectOption<string>[] = [
+  { value: "", label: "Seleccionar mes…" },
+  { value: "Enero", label: "Enero" },
+  { value: "Febrero", label: "Febrero" },
+  { value: "Marzo", label: "Marzo" },
+  { value: "Abril", label: "Abril" },
+  { value: "Mayo", label: "Mayo" },
+  { value: "Junio", label: "Junio" },
+  { value: "Julio", label: "Julio" },
+  { value: "Agosto", label: "Agosto" },
+  { value: "Septiembre", label: "Septiembre" },
+  { value: "Octubre", label: "Octubre" },
+  { value: "Noviembre", label: "Noviembre" },
+  { value: "Diciembre", label: "Diciembre" },
+];
+
+export const IT_PROJECT_YEAR_OPTIONS: FormStyledSelectOption<string>[] = [
+  { value: "", label: "Seleccionar año…" },
+  { value: "2024", label: "2024" },
+  { value: "2025", label: "2025" },
+  { value: "2026", label: "2026" },
+];
+
 export const URGENCY_OPTIONS_WITH_PLACEHOLDER: FormStyledSelectOption<string>[] = [
   { value: "", label: "Seleccionar…" },
   ...IT_PROJECT_URGENCY_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
@@ -45,6 +68,8 @@ export type ItProjectTaskFormRow = {
   sprintRowId?: string;
   /** Si el sprint solo viene cargado desde Notion y no está entre las filas de sprint locales. */
   sprintLabelHint?: string;
+  assigneeName?: string;
+  targetDate?: string;
 };
 
 /** Payload de `taskLines` hacia PATCH Notion (`sprintId` ausente → no mutar esa relación en la página de la tarea). */
@@ -52,6 +77,10 @@ export type NotionTaskLinePatchBody = {
   id: string;
   text: string;
   sprintId?: string | null;
+  /** Columna sprint UI; se escribe en Notión en la propiedad de tarea (`Estatus` por defecto); ver `notionTaskBoardStatusEnv`. */
+  sprintBoardColumn?: ItSprintTaskBoardColumn;
+  assigneeName?: string;
+  targetDate?: string;
 };
 
 /** Construye el cuerpo de tareas detectando sólo diferencias contra el vínculo sprint original en servidor. */
@@ -85,6 +114,8 @@ export function buildNotionTaskLinePatchBodies(
 
     const payload: NotionTaskLinePatchBody = { id: row.id, text };
     if (sprintPatch !== undefined) payload.sprintId = sprintPatch;
+    if (row.assigneeName !== undefined) payload.assigneeName = row.assigneeName;
+    if (row.targetDate !== undefined) payload.targetDate = row.targetDate;
     return payload;
   });
 }
@@ -99,14 +130,21 @@ export function mergePlannedTaskDescriptionsFromRows(
     ...project,
     plannedTasks: project.plannedTasks.map((t) => {
       const row = rowById.get(t.id);
-      if (!row) return t;
-      const trimmed = row.description?.trim() ?? "";
-      if (!trimmed) {
-        const next = { ...t };
-        delete next.description;
-        return next;
-      }
-      return { ...t, description: trimmed };
+      const trimmedDesc = row.description?.trim() ?? "";
+      const trimmedAssignee = row.assigneeName?.trim() ?? "";
+      const trimmedDate = row.targetDate?.trim() ?? "";
+      const next = { ...t };
+      
+      if (!trimmedDesc) delete next.description;
+      else next.description = trimmedDesc;
+
+      if (!trimmedAssignee) delete next.assigneeName;
+      else next.assigneeName = trimmedAssignee;
+
+      if (!trimmedDate) delete next.targetDate;
+      else next.targetDate = trimmedDate;
+
+      return next;
     }),
   };
 }
@@ -119,6 +157,8 @@ export type NotionProjectPersistBodyFromClient = {
   riskLevel: ItProject["riskLevel"];
   urgencyLevel?: ItProject["urgencyLevel"];
   pmNames?: string[];
+  month?: string;
+  year?: string;
   taskLines: NotionTaskLinePatchBody[];
 };
 
@@ -131,15 +171,19 @@ export function pmNameFieldToPmNames(pmName: string | undefined): string[] {
     .filter((s) => s.length > 0);
 }
 
-export function buildNotionPersistBodyUpdatingOneTaskTitle(
+export function buildNotionPersistBodyUpdatingOneSprintTask(
   project: ItProject,
   taskId: string,
-  nextTaskTitle: string,
+  opts: { title: string; sprintBoardColumn: ItSprintTaskBoardColumn },
 ): NotionProjectPersistBodyFromClient {
-  const text = nextTaskTitle.trim().slice(0, 2000);
+  const text = opts.title.trim().slice(0, 2000);
   const taskLines: NotionTaskLinePatchBody[] = project.plannedTasks.map((t) => {
     const lineText = t.id === taskId ? text : t.title.trim().slice(0, 2000);
-    const body: NotionTaskLinePatchBody = { id: t.id, text: lineText };
+    const body: NotionTaskLinePatchBody = {
+      id: t.id,
+      text: lineText,
+      ...(t.id === taskId ? { sprintBoardColumn: opts.sprintBoardColumn } : {}),
+    };
     const sid = t.sprintId?.trim() ?? "";
     if (sid && isLikelyNotionPageId(sid)) {
       body.sprintId = sid;
@@ -154,6 +198,8 @@ export function buildNotionPersistBodyUpdatingOneTaskTitle(
     riskLevel: project.riskLevel,
     urgencyLevel: project.urgencyLevel ?? "media",
     pmNames: pmNameFieldToPmNames(project.pmName),
+    month: project.month,
+    year: project.year,
     taskLines,
   };
 }

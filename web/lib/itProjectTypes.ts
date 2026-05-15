@@ -17,15 +17,24 @@ export interface ItProjectMilestone {
   done: boolean;
 }
 
+/** Columna del Kanban sprint (UI ↔ Notión opcional vía propiedad configurada). */
+export type ItSprintTaskBoardColumn = "pendiente" | "en_curso" | "hecho";
+
 /** Trabajo planificado asociado al alcance del proyecto */
 export interface ItProjectPlannedTask {
   id: string;
   title: string;
+  /** Si existe, tiene prioridad sobre prefijos `[x]` / `[~]` en el título para colocar la tarjeta. */
+  sprintBoardColumn?: ItSprintTaskBoardColumn;
   /** Texto libre de contexto (formulario; no sincronizado con Notion hasta ampliar la API de tareas). */
   description?: string;
   /** Página sprint en Notion enlazada desde la fila de tarea (si la base lo permite y la lectura encuentra la relación). */
   sprintId?: string;
   sprintTitle?: string;
+  /** Nombre del responsable (o responsables) de la tarea. */
+  assigneeName?: string;
+  /** Fecha límite de la tarea. */
+  targetDate?: string;
 }
 
 /** Key result vinculado al proyecto (objetivo medible / línea estratégica) */
@@ -63,6 +72,10 @@ export interface ItProject {
   targetEndDate: string;
   riskLevel: ItProjectRisk;
   urgencyLevel?: ItProjectUrgency;
+  month?: string;
+  monthId?: string;
+  year?: string;
+  yearId?: string;
 
   milestones: ItProjectMilestone[];
   keyResults: ItProjectKeyResult[];

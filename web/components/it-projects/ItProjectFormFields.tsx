@@ -8,6 +8,8 @@ import { FormStyledMultiSelect } from "@/components/ui/FormStyledMultiSelect";
 import { FormStyledSelect, type FormStyledSelectOption } from "@/components/ui/FormStyledSelect";
 import {
   IT_PROJECT_PHASE_SELECT_OPTIONS,
+  IT_PROJECT_MONTH_OPTIONS,
+  IT_PROJECT_YEAR_OPTIONS,
   RISK_OPTIONS_WITH_PLACEHOLDER,
   URGENCY_OPTIONS_WITH_PLACEHOLDER,
   buildSprintPeriodFromIsoInputs,
@@ -280,6 +282,7 @@ export function ItProjectFormFields(props: ItProjectFormFieldsProps) {
 
   const [descDrawerTaskId, setDescDrawerTaskId] = useState<string | null>(null);
   const [descDrawerDraft, setDescDrawerDraft] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; type: "kr" | "sprint" | "task"; title: string } | null>(null);
 
   const dClass = datesEditable ? "" : "opacity-80";
 
@@ -448,7 +451,7 @@ export function ItProjectFormFields(props: ItProjectFormFieldsProps) {
                     {mutateSecondaryWrites ? (
                       <button
                         type="button"
-                        onClick={() => setKeyResultLines((rows) => rows.filter((r) => r.id !== row.id))}
+                        onClick={() => setDeleteTarget({ id: row.id, type: "kr", title: row.text })}
                         className="shrink-0 rounded-md px-2 py-0.5 text-xs font-bold text-rose-700 hover:bg-rose-50"
                       >
                         Quitar
@@ -530,7 +533,7 @@ export function ItProjectFormFields(props: ItProjectFormFieldsProps) {
                       {mutateSecondaryWrites ? (
                         <button
                           type="button"
-                          onClick={() => setSprintRows((rows) => rows.filter((r) => r.id !== row.id))}
+                          onClick={() => setDeleteTarget({ id: row.id, type: "sprint", title: row.title })}
                           className="shrink-0 rounded-md px-2 py-0.5 text-xs font-bold text-rose-700 hover:bg-rose-50"
                         >
                           Quitar
@@ -669,6 +672,11 @@ export function ItProjectFormFields(props: ItProjectFormFieldsProps) {
                   sprintTitleResolved &&
                   Boolean(sprintTitleResolved.trim());
 
+                const taskAssigneeOptions: FormStyledSelectOption<string>[] = [
+                  { value: "", label: "Responsable" },
+                  ...pmSelectOptions,
+                ];
+
                 return (
                   <li
                     key={row.id}
@@ -685,7 +693,7 @@ export function ItProjectFormFields(props: ItProjectFormFieldsProps) {
                         <div className="flex shrink-0 justify-end">
                           <button
                             type="button"
-                            onClick={() => setTaskLines((rows) => rows.filter((r) => r.id !== row.id))}
+                            onClick={() => setDeleteTarget({ id: row.id, type: "task", title: row.text })}
                             className="rounded-md px-2 py-0.5 text-xs font-bold text-rose-700 hover:bg-rose-50"
                           >
                             Quitar
@@ -694,48 +702,87 @@ export function ItProjectFormFields(props: ItProjectFormFieldsProps) {
                       ) : null}
                     </div>
                     {mutateSecondaryWrites ? (
-                      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                        <div className="min-w-0 flex-1 sm:max-w-sm">
-                          <label className="sr-only" htmlFor={pid(formIdPrefix, `task-sprint-${row.id}`)}>
-                            Sprint de la tarea
-                          </label>
-                          <FormStyledSelect<string>
-                            id={pid(formIdPrefix, `task-sprint-${row.id}`)}
-                            value={sprintSelectValue}
-                            onChange={(v) =>
-                              setTaskLines((rows) =>
-                                rows.map((r) =>
-                                  r.id === row.id
-                                    ? {
-                                        ...r,
-                                        sprintRowId: v.trim() !== "" ? v.trim() : undefined,
-                                        ...(v.trim() !== "" ? { sprintLabelHint: undefined } : {}),
-                                      }
-                                    : r,
-                                ),
-                              )
-                            }
-                            options={sprintOptions}
-                            dimWhenEmpty
-                          />
+                      <div className="mt-2 flex flex-col gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                          <div className="min-w-0 flex-1 sm:max-w-xs">
+                            <label className="sr-only" htmlFor={pid(formIdPrefix, `task-sprint-${row.id}`)}>
+                              Sprint de la tarea
+                            </label>
+                            <FormStyledSelect<string>
+                              id={pid(formIdPrefix, `task-sprint-${row.id}`)}
+                              value={sprintSelectValue}
+                              onChange={(v) =>
+                                setTaskLines((rows) =>
+                                  rows.map((r) =>
+                                    r.id === row.id
+                                      ? {
+                                          ...r,
+                                          sprintRowId: v.trim() !== "" ? v.trim() : undefined,
+                                          ...(v.trim() !== "" ? { sprintLabelHint: undefined } : {}),
+                                        }
+                                      : r,
+                                  ),
+                                )
+                              }
+                              options={sprintOptions}
+                              dimWhenEmpty
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 sm:max-w-xs">
+                            <label className="sr-only" htmlFor={pid(formIdPrefix, `task-assignee-${row.id}`)}>Responsable de la tarea</label>
+                            <FormStyledSelect<string>
+                              id={pid(formIdPrefix, `task-assignee-${row.id}`)}
+                              value={row.assigneeName || ""}
+                              onChange={(v) => setTaskLines(rows => rows.map(r => r.id === row.id ? { ...r, assigneeName: v } : r))}
+                              options={taskAssigneeOptions}
+                              dimWhenEmpty
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDescDrawerTaskId(row.id);
+                              setDescDrawerDraft(row.description ?? "");
+                            }}
+                            className="shrink-0 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 sm:py-1.5"
+                          >
+                            {row.description?.trim() ? "Editar descripción" : "Agregar descripción"}
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDescDrawerTaskId(row.id);
-                            setDescDrawerDraft(row.description ?? "");
-                          }}
-                          className="shrink-0 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 sm:py-1.5"
-                        >
-                          {row.description?.trim() ? "Editar descripción" : "Agregar descripción"}
-                        </button>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                          <div className="min-w-0 flex-1 sm:max-w-[200px]">
+                            <label className="sr-only" htmlFor={pid(formIdPrefix, `task-date-${row.id}`)}>Fecha límite de la tarea</label>
+                            <FormStyledDateField
+                              id={pid(formIdPrefix, `task-date-${row.id}`)}
+                              value={row.targetDate || ""}
+                              onChange={(v) => setTaskLines(rows => rows.map(r => r.id === row.id ? { ...r, targetDate: v } : r))}
+                              dimWhenEmpty
+                            />
+                          </div>
+                        </div>
                       </div>
-                    ) : showSprintLineReadOnly ? (
-                      <p className="mt-2 text-xs text-violet-800/95">
-                        <span className="font-semibold text-slate-600">Sprint: </span>
-                        {sprintTitleResolved}
-                      </p>
-                    ) : null}
+                    ) : (
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+                        {showSprintLineReadOnly && (
+                          <p className="text-xs text-violet-800/95">
+                            <span className="font-semibold text-slate-600">Sprint: </span>
+                            {sprintTitleResolved}
+                          </p>
+                        )}
+                        {row.assigneeName?.trim() && (
+                          <p className="text-xs text-slate-600">
+                            <span className="font-semibold">Responsable: </span>
+                            {row.assigneeName.trim()}
+                          </p>
+                        )}
+                        {row.targetDate?.trim() && (
+                          <p className="text-xs text-slate-600">
+                            <span className="font-semibold">Límite: </span>
+                            {row.targetDate.trim()}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -831,6 +878,64 @@ export function ItProjectFormFields(props: ItProjectFormFieldsProps) {
           );
         }}
       />
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] transition-opacity"
+            onClick={() => setDeleteTarget(null)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative w-full max-w-sm transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all"
+          >
+            <h3 className="text-lg font-bold leading-6 text-slate-900">
+              Confirmar eliminación
+            </h3>
+            <div className="mt-2">
+              <p className="text-sm text-slate-500">
+                ¿Estás seguro de que deseas eliminar{" "}
+                {deleteTarget.type === "kr"
+                  ? "este resultado clave"
+                  : deleteTarget.type === "sprint"
+                    ? "este sprint"
+                    : "esta tarea"}
+                ?
+              </p>
+              <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 italic border border-slate-100 line-clamp-3">
+                "{deleteTarget.title}"
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                onClick={() => {
+                  if (deleteTarget.type === "kr") {
+                    setKeyResultLines((rows) => rows.filter((r) => r.id !== deleteTarget.id));
+                  } else if (deleteTarget.type === "sprint") {
+                    setSprintRows((rows) => rows.filter((r) => r.id !== deleteTarget.id));
+                  } else if (deleteTarget.type === "task") {
+                    setTaskLines((rows) => rows.filter((r) => r.id !== deleteTarget.id));
+                  }
+                  setDeleteTarget(null);
+                }}
+              >
+                Quitar elemento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

@@ -29,7 +29,8 @@ export function embellishKnownNotionPermissionErrors(
 
   return (
     `${base} ` +
-    "Para comentarios, en Developers activa capacidades para **read** + **insert** comments sobre la página. " +
-    "Comparte o conecta la página-tarea al workspace donde vive esa integración."
+    "Para comentarios, en Developers → tu integración → **Capacidades**, activa las dos: **«Leer comentarios»** y **«Insertar comentarios»** " +
+    "(la lista del modal usa la API de lectura; sin «Leer comentarios» falla con *Insufficient permissions* aunque «Insertar» ya esté marcado). " +
+    "Conecta la página de la tarea a esa integración (menú ⋮ → Conexiones) y revisa que el token del servidor (`NOTION_API_KEY`) sea de la misma integración."
   ).concat(` Mensaje técnico: «${msg.slice(0, 400)}»`);
 }

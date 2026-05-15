@@ -16,6 +16,7 @@ import { notionRowsToItProjects } from "@/lib/notionProjectFromPage";
 import type { ItProjectPhase } from "@/lib/itProjectTypes";
 import { notionApiJsonHeaders, notionQueryAllDatabaseRows } from "@/lib/notionRelations";
 import { syncNotionProjectPageBodyFromPlainBestEffort } from "@/lib/notionProjectPageBodySync";
+import { resolveProjectPeriodRelations } from "@/lib/notionPeriodSync";
 
 /** Cache Notion response for 0s — avoids hammering Notion API but ensures fresh data for debug. */
 export const revalidate = 0;
@@ -34,6 +35,7 @@ const createTaskLineSchema = z.object({
   sprintId: z
     .union([z.string().max(120), z.null()])
     .optional(),
+  sprintBoardColumn: z.enum(["pendiente", "en_curso", "hecho"]).optional(),
 });
 
 const createSprintRowSchema = z.object({
@@ -48,6 +50,8 @@ const createBodySchema = z.object({
   phase: z.enum(["backlog", "sin_empezar", "planificacion", "ejecucion", "cierre", "archivado"]),
   riskLevel: z.enum(["bajo", "medio", "alto"]),
   urgencyLevel: z.enum(["baja", "media", "alta"]).optional(),
+  startDate: z.string().max(120).optional(),
+  targetEndDate: z.string().max(120).optional(),
   /** Un responsable (API antigua). */
   pmName: z.string().max(500).optional(),
   /** Varios responsables (multi_select en Notion). */
@@ -126,14 +130,33 @@ export async function POST(request: Request) {
         : [];
 
   try {
-    const properties = buildNotionCreateProjectProperties({
+    const propertiesCore = buildNotionCreateProjectProperties({
       name: dto.name.trim(),
       phase: dto.phase as ItProjectPhase,
       riskLevel: dto.riskLevel,
       urgencyLevel: dto.urgencyLevel,
       pmNames: resolvedPmNames,
       description: dto.description?.trim(),
+      startDate: dto.startDate,
+      targetEndDate: dto.targetEndDate,
     });
+
+    // 1. Resolver Periodo Automático (Meses/Años)
+    const periodProps: Record<string, any> = {};
+    if (dto.startDate) {
+      try {
+        const { monthId, yearId } = await resolveProjectPeriodRelations({
+          token,
+          startDateIso: dto.startDate,
+        });
+        if (monthId) periodProps["meses"] = { relation: [{ id: monthId }] };
+        if (yearId) periodProps["años"] = { relation: [{ id: yearId }] };
+      } catch (err) {
+        console.error("Error resolviendo periodo al crear:", err);
+      }
+    }
+
+    const properties = { ...propertiesCore, ...periodProps };
     const { id } = await notionApiCreateDatabasePage({
       databaseId: dbId,
       token,

@@ -148,7 +148,7 @@ export function FormStyledSelect<T extends string>({
           formFieldSelectTriggerClass +
           triggerInvalid +
           (disabled ? " cursor-not-allowed opacity-60" : "") +
-          (showAsPlaceholder ? " text-slate-400" : "")
+          (showAsPlaceholder ? " !text-slate-400" : "")
         }
         onClick={() => {
           if (disabled) return;

@@ -3,7 +3,13 @@ import {
   notionApiCreateDatabasePage,
 } from "@/lib/notionCreateProjectPayload";
 import { isLikelyNotionPageId } from "@/lib/notionProjectFromPage";
+import type { ItSprintTaskBoardColumn } from "@/lib/itProjectTypes";
 import {
+  notionTaskBoardStatusOptionFallback,
+  notionTaskBoardStatusPropertyLabel,
+} from "@/lib/notionTaskBoardStatusEnv";
+import {
+  findNotionPagePropertyKey,
   notionApiJsonHeaders,
   notionRelationPropertyCandidates,
   notionTaskPageSprintRelationCandidates,
@@ -28,7 +34,14 @@ export class NotionRelationSyncError extends Error {
 
 export type NotionRelationsSyncInput = {
   keyResultLines?: { id: string; text: string }[];
-  taskLines?: { id: string; text: string; sprintId?: string | null }[];
+  taskLines?: {
+    id: string;
+    text: string;
+    sprintId?: string | null;
+    sprintBoardColumn?: ItSprintTaskBoardColumn;
+    assigneeName?: string;
+    targetDate?: string;
+  }[];
   sprintRows?: { id: string; title: string; timeframe?: string }[];
   deliverables?: { id: string; title: string; targetDate?: string }[];
 };
@@ -99,10 +112,6 @@ const PREFLIGHT_SECTION_LABEL: Record<RelationKindProp, string> = {
   deliverables: "Entregables",
 };
 
-/**
- * Agrupa errores de configuración (propiedad relation o falta base) antes de crear en Notion,
- * para que un fallo por KR no parezca un error sólo del bloque donde el usuario está scrolleando.
- */
 function preflightNotionRelationsSyncOrThrow(
   input: NotionRelationsSyncInput,
   projectProperties: Record<string, unknown>,
@@ -258,6 +267,216 @@ async function patchPageTitle(token: string, pageId: string, plainTitle: string)
   }
 }
 
+function resolveTaskPageSprintRelationKey(props: Record<string, unknown>): string | undefined {
+  const explicit = process.env.NOTION_TASKS_SPRINT_LINK_PROP?.trim();
+  if (explicit) {
+    const k = relationPropertyKeyByName(props, explicit);
+    if (k) return k;
+  }
+  for (const cand of notionTaskPageSprintRelationCandidates()) {
+    const k = relationPropertyKeyByName(props, cand);
+    if (k) return k;
+  }
+  return undefined;
+}
+
+async function patchTaskPageAllProperties(params: {
+  token: string;
+  taskPageId: string;
+  title?: string;
+  sprintId?: string | null;
+  sprintBoardColumn?: ItSprintTaskBoardColumn;
+  assigneeName?: string;
+  targetDate?: string;
+  monthId?: string;
+}): Promise<void> {
+  const { token, taskPageId, monthId } = params;
+  const page = await notionPageGetJson(token, taskPageId);
+  const props = page.properties as Record<string, unknown>;
+  const properties: Record<string, unknown> = {};
+
+  if (monthId !== undefined) {
+    const propKey = findNotionPagePropertyKey(props, "mes") || findNotionPagePropertyKey(props, "Mes");
+    if (propKey) {
+      properties[propKey] = {
+        relation: monthId ? [{ id: monthId }] : [],
+      };
+    }
+  }
+
+  if (params.title !== undefined) {
+    const titleKey = findTitlePropKey(props);
+    if (titleKey) {
+      properties[titleKey] = {
+        title: [{ type: "text", text: { content: params.title.trim() } }],
+      };
+    }
+  }
+
+  if (params.sprintId !== undefined) {
+    const sprintKey = resolveTaskPageSprintRelationKey(props);
+    if (sprintKey) {
+      properties[sprintKey] = {
+        relation: params.sprintId ? [{ id: params.sprintId }] : [],
+      };
+    }
+  }
+
+  if (params.sprintBoardColumn !== undefined) {
+    const propLabel = notionTaskBoardStatusPropertyLabel();
+    const statusOption = notionTaskBoardStatusOptionFallback(params.sprintBoardColumn);
+    if (propLabel && statusOption) {
+      properties[propLabel] = { status: { name: statusOption } };
+    }
+  }
+
+  if (params.assigneeName !== undefined || params.targetDate !== undefined) {
+    if (params.assigneeName !== undefined) {
+      const propKey = findNotionPagePropertyKey(props, "Responsable") || findNotionPagePropertyKey(props, "responsable");
+      if (propKey) {
+        const cell = props[propKey];
+        if (isRecord(cell)) {
+          const val = params.assigneeName.trim();
+          if (cell.type === "select") {
+            properties[propKey] = val ? { select: { name: val } } : { select: null };
+          } else if (cell.type === "multi_select") {
+            properties[propKey] = val ? { multi_select: [{ name: val }] } : { multi_select: [] };
+          } else if (cell.type === "people") {
+            console.warn(`[Notion Sync] No se puede actualizar responsable "${val}" en columna tipo "people" por nombre.`);
+          }
+        }
+      }
+    }
+
+    if (params.targetDate !== undefined) {
+      let val = params.targetDate.trim();
+      if (val.includes("/") || val.includes("-")) {
+        const parts = val.split(/[\/-]/);
+        if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            val = `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+          } else if (parts[2].length === 4) {
+            val = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+          }
+        }
+      }
+
+      const propKey = findNotionPagePropertyKey(props, "Due Date") || 
+                      findNotionPagePropertyKey(props, "Fecha de entrega") || 
+                      findNotionPagePropertyKey(props, "Fecha límite") || 
+                      findNotionPagePropertyKey(props, "Fecha");
+      if (propKey) {
+        properties[propKey] = val ? { date: { start: val } } : { date: null };
+      }
+    }
+  }
+
+  if (Object.keys(properties).length === 0) return;
+
+  const res = await fetch(`https://api.notion.com/v1/pages/${encodeURIComponent(taskPageId)}`, {
+    method: "PATCH",
+    headers: notionApiJsonHeaders(token),
+    body: JSON.stringify({ properties }),
+  });
+  
+  if (!res.ok) {
+    const err = await res.text();
+    console.error(`[Notion Sync] Error patching task ${taskPageId}:`, err);
+  }
+}
+
+async function taskRelationPatchSlice(params: {
+  token: string;
+  projectPageId: string;
+  projectProperties: Record<string, unknown>;
+  lines: readonly {
+    id: string;
+    text: string;
+    sprintId?: string | null;
+    sprintBoardColumn?: ItSprintTaskBoardColumn;
+    assigneeName?: string;
+    targetDate?: string;
+  }[];
+  monthId?: string;
+}): Promise<Record<string, unknown>> {
+  const propKey = resolveRelationPropertyKeyFromKind(params.projectProperties, "tasks");
+  if (!propKey) {
+    throw new NotionRelationSyncError(
+      `No se encontró en la página del proyecto ninguna propiedad de tipo «relación» para ${KIND_LABEL.tasks}. Revisa el nombre en Notion o configura las variables NOTION_PROP_PROJECT_*_RELATION en el servidor.`,
+    );
+  }
+
+
+  const notionIds: string[] = [];
+  const dbIdFromEnv = DATABASE_ID_BY_KIND.tasks();
+  const backlinkProp = BACKLINK_PROP_BY_KIND.tasks();
+
+  for (const row of params.lines) {
+    const plain = row.text.trim();
+    if (!plain) continue;
+
+    try {
+      if (isLikelyNotionPageId(row.id.trim())) {
+        const pid = row.id.trim();
+        await patchTaskPageAllProperties({
+          token: params.token,
+          taskPageId: pid,
+          title: plain,
+          sprintId: row.sprintId,
+          sprintBoardColumn: row.sprintBoardColumn,
+           assigneeName: row.assigneeName,
+           targetDate: row.targetDate,
+           monthId: params.monthId,
+         });
+        notionIds.push(pid);
+        continue;
+      }
+
+      const dbId = dbIdFromEnv;
+      if (!dbId) {
+        throw new NotionRelationSyncError(
+          `Para crear ${KIND_LABEL.tasks} nuevos desde la app, define en el servidor la variable ${DATABASE_ENV_NAME.tasks} con el ID de la base de Notion correspondiente.`,
+        );
+      }
+
+      const titleKey = await getDatabaseTitlePropKey(dbId, params.token);
+
+      const createProps = buildCreatedRowProps({
+        titleKey,
+        titlePlain: plain,
+        projectPageId: params.projectPageId,
+        relationToProjectProp: backlinkProp?.trim(),
+      });
+
+      const { id: newId } = await notionApiCreateDatabasePage({
+        databaseId: dbId,
+        token: params.token,
+        properties: createProps,
+        relatedRowIcon: "task",
+      });
+      notionIds.push(newId);
+      await patchTaskPageAllProperties({
+        token: params.token,
+        taskPageId: newId,
+        sprintId: row.sprintId,
+        sprintBoardColumn: row.sprintBoardColumn,
+         assigneeName: row.assigneeName,
+         targetDate: row.targetDate,
+         monthId: params.monthId,
+       });
+    } catch (e) {
+      if (e instanceof NotionRelationSyncError) throw e;
+      wrapNotionMutationError(`Guardar ${KIND_LABEL.tasks} en Notion`, e);
+    }
+  }
+
+  return {
+    [propKey]: {
+      relation: notionIds.map((id) => ({ id })),
+    },
+  };
+}
+
 function buildCreatedRowProps(params: {
   titleKey: string;
   titlePlain: string;
@@ -350,145 +569,6 @@ async function relationPatchSlice(params: {
   };
 }
 
-async function notionPatchRelationOnPage(
-  token: string,
-  pageId: string,
-  propKey: string,
-  relationIds: string[],
-): Promise<void> {
-  const res = await fetch(`https://api.notion.com/v1/pages/${encodeURIComponent(pageId)}`, {
-    method: "PATCH",
-    headers: notionApiJsonHeaders(token),
-    body: JSON.stringify({
-      properties: {
-        [propKey]: {
-          relation: relationIds.map((id) => ({ id })),
-        },
-      },
-    }),
-  });
-  const txt = await res.text();
-  if (!res.ok) {
-    const notionMessage = extractNotionErrorMessage(txt);
-    throw new Error(notionMessage ?? txt.slice(0, 500));
-  }
-}
-
-function sprintRelationPropKeyFromTaskProps(props: Record<string, unknown>): string | undefined {
-  const explicit = process.env.NOTION_TASKS_SPRINT_LINK_PROP?.trim();
-  if (explicit) {
-    const k = relationPropertyKeyByName(props, explicit);
-    if (k) return k;
-  }
-  for (const cand of notionTaskPageSprintRelationCandidates()) {
-    const k = relationPropertyKeyByName(props, cand);
-    if (k) return k;
-  }
-  return undefined;
-}
-
-/** Actualiza la relación Sprint en la **página de la tarea** (`null` vacía la relación). */
-async function patchTaskPageSprintRelation(
-  token: string,
-  taskPageId: string,
-  sprintId: string | null | undefined,
-): Promise<void> {
-  if (sprintId === undefined) return;
-
-  const page = await notionPageGetJson(token, taskPageId);
-  const props = page.properties;
-  if (!isRecord(props)) return;
-
-  const propKey = sprintRelationPropKeyFromTaskProps(props);
-  if (!propKey) {
-    console.warn(
-      "[Notion sync] No se encontró columna relación Sprint en la página de tarea. Configura NOTION_TASKS_SPRINT_LINK_PROP o NOTION_PROP_TASK_PAGE_SPRINT_RELATION para lectura.",
-    );
-    return;
-  }
-
-  const ids =
-    sprintId === null
-      ? []
-      : isLikelyNotionPageId(sprintId.trim())
-        ? [sprintId.trim()]
-        : [];
-
-  if (sprintId !== null && ids.length === 0) {
-    console.warn(`[Notion sync] sprintId no es UUID de página Notion (${sprintId}); se omite.`);
-    return;
-  }
-
-  await notionPatchRelationOnPage(token, taskPageId, propKey, ids);
-}
-
-async function taskRelationPatchSlice(params: {
-  token: string;
-  projectPageId: string;
-  projectProperties: Record<string, unknown>;
-  lines: readonly { id: string; text: string; sprintId?: string | null }[];
-}): Promise<Record<string, unknown>> {
-  const propKey = resolveRelationPropertyKeyFromKind(params.projectProperties, "tasks");
-  if (!propKey) {
-    throw new NotionRelationSyncError(
-      `No se encontró en la página del proyecto ninguna propiedad de tipo «relación» para ${KIND_LABEL.tasks}. Revisa el nombre en Notion o configura las variables NOTION_PROP_PROJECT_*_RELATION en el servidor.`,
-    );
-  }
-
-  const notionIds: string[] = [];
-  const dbIdFromEnv = DATABASE_ID_BY_KIND.tasks();
-  const backlinkProp = BACKLINK_PROP_BY_KIND.tasks();
-
-  for (const row of params.lines) {
-    const plain = row.text.trim();
-    if (!plain) continue;
-
-    try {
-      if (isLikelyNotionPageId(row.id.trim())) {
-        const pid = row.id.trim();
-        await patchPageTitle(params.token, pid, plain);
-        await patchTaskPageSprintRelation(params.token, pid, row.sprintId);
-        notionIds.push(pid);
-        continue;
-      }
-
-      const dbId = dbIdFromEnv;
-      if (!dbId) {
-        throw new NotionRelationSyncError(
-          `Para crear ${KIND_LABEL.tasks} nuevos desde la app, define en el servidor la variable ${DATABASE_ENV_NAME.tasks} con el ID de la base de Notion correspondiente.`,
-        );
-      }
-
-      const titleKey = await getDatabaseTitlePropKey(dbId, params.token);
-
-      const createProps = buildCreatedRowProps({
-        titleKey,
-        titlePlain: plain,
-        projectPageId: params.projectPageId,
-        relationToProjectProp: backlinkProp?.trim(),
-      });
-
-      const { id: newId } = await notionApiCreateDatabasePage({
-        databaseId: dbId,
-        token: params.token,
-        properties: createProps,
-        relatedRowIcon: "task",
-      });
-      notionIds.push(newId);
-      await patchTaskPageSprintRelation(params.token, newId, row.sprintId);
-    } catch (e) {
-      if (e instanceof NotionRelationSyncError) throw e;
-      wrapNotionMutationError(`Guardar ${KIND_LABEL.tasks} en Notion`, e);
-    }
-  }
-
-  return {
-    [propKey]: {
-      relation: notionIds.map((id) => ({ id })),
-    },
-  };
-}
-
 /**
  * Fragmento del `PATCH` pages de proyecto: actualiza enlaces relation + títulos de filas enlazadas
  * ya existentes en Notion, y opcionalmente crea filas en bases hijas usando variables *_DATABASE_ID.
@@ -498,9 +578,10 @@ export async function buildNotionRelationsPropertiesPatch(opts: {
   projectPageId: string;
   projectProperties: Record<string, unknown>;
   input: NotionRelationsSyncInput;
+  monthId?: string;
 }): Promise<Record<string, unknown>> {
   const merged: Record<string, unknown> = {};
-  const { token, projectPageId, projectProperties } = opts;
+  const { token, projectPageId, projectProperties, monthId } = opts;
 
   const hasRelationSlices =
     opts.input.keyResultLines !== undefined ||
@@ -559,14 +640,15 @@ export async function buildNotionRelationsPropertiesPatch(opts: {
       });
     }
     Object.assign(
-      merged,
-      await taskRelationPatchSlice({
-        token,
-        projectPageId,
-        projectProperties,
-        lines: taskLinesResolved,
-      }),
-    );
+       merged,
+       await taskRelationPatchSlice({
+         token,
+         projectPageId,
+         projectProperties,
+         lines: taskLinesResolved,
+         monthId: monthId,
+       }),
+     );
   }
 
   if (opts.input.deliverables !== undefined) {
@@ -628,16 +710,21 @@ export async function mirrorProjectTasksToLinkedSprintsBestEffort(params: {
     try {
       const sprintProps = await fetchNotionProjectPageProperties(sprintId, params.token);
       const key = sprintPageTasksRelationKey(sprintProps);
-      if (!key) {
-        console.warn(
-          `[Notion mirror] Sprint ${sprintId}: ninguna propiedad relación tipo tareas encontrada ` +
-            `(define NOTION_PROP_SPRINT_TASKS_RELATION si el nombre no es 'tareas' / 'Tareas' / …).`,
-        );
-        continue;
+      if (key) {
+        await fetch(`https://api.notion.com/v1/pages/${encodeURIComponent(sprintId)}`, {
+          method: "PATCH",
+          headers: notionApiJsonHeaders(params.token),
+          body: JSON.stringify({
+            properties: {
+              [key]: {
+                relation: taskIds.map((id) => ({ id })),
+              },
+            },
+          }),
+        });
       }
-      await notionPatchRelationOnPage(params.token, sprintId, key, taskIds);
-    } catch (e) {
-      console.warn("[Notion mirror] No se pudieron enlazar las tareas en el sprint:", sprintId, e);
+    } catch (err) {
+      console.error(`Error mirroring tasks to sprint ${sprintId}:`, err);
     }
   }
 }

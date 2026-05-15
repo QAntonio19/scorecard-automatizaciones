@@ -5,8 +5,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import type { ItProject, ItProjectPlannedTask } from "@/lib/itProjectTypes";
 import {
   SPRINT_TASK_KANBAN_COLUMN_ORDER,
-  applySprintTaskTitleForKanbanColumn,
-  inferSprintTaskKanbanColumn,
+  plannedTaskCanonicalTitle,
+  resolvedSprintTaskKanbanColumn,
   sprintTaskKanbanColumnLabel,
   type SprintTaskKanbanColumn,
 } from "@/lib/itProjectScopeProgress";
@@ -19,6 +19,11 @@ type NotionTaskCommentDto = {
   authorLabel: string;
 };
 
+export type SprintTaskSavePayload = {
+  title: string;
+  sprintBoardColumn: SprintTaskKanbanColumn;
+};
+
 export type SprintTaskDetailModalProps = {
   open: boolean;
   task: ItProjectPlannedTask | null;
@@ -28,7 +33,7 @@ export type SprintTaskDetailModalProps = {
   saving: boolean;
   saveError: string | null;
   onClose: () => void;
-  onSave: (nextTitle: string) => void;
+  onSave: (payload: SprintTaskSavePayload) => void;
 };
 
 function notionTaskPageUrl(taskPageId: string): string {
@@ -95,7 +100,7 @@ export function SprintTaskDetailModal({
 
   useEffect(() => {
     if (!open || !task) return;
-    setColumnDraft(inferSprintTaskKanbanColumn(task.title));
+    setColumnDraft(resolvedSprintTaskKanbanColumn(task));
   }, [open, task]);
 
   const loadComments = useCallback(async (taskPageId: string) => {
@@ -219,8 +224,12 @@ export function SprintTaskDetailModal({
     return null;
   }
 
-  const boardCol = sprintTaskKanbanColumnLabel(inferSprintTaskKanbanColumn(task.title));
-  const nextTitle = applySprintTaskTitleForKanbanColumn(task.title, columnDraft);
+  const canonicalTitle = plannedTaskCanonicalTitle(task.title);
+  const resolvedCol = resolvedSprintTaskKanbanColumn(task);
+  const boardCol = sprintTaskKanbanColumnLabel(resolvedCol);
+
+  const hasChanges =
+    columnDraft !== resolvedCol || canonicalTitle.trim() !== task.title.trim();
   const notionTaskOk = isLikelyNotionPageId(task.id);
   const blockNotionWrite = persistedOnNotion && !notionTaskOk;
   const notionExtras = persistedOnNotion && notionTaskOk;
@@ -253,7 +262,7 @@ export function SprintTaskDetailModal({
             </button>
           </div>
 
-          <p className="mt-3 text-sm font-medium leading-snug text-slate-800">{task.title}</p>
+          <p className="mt-3 text-sm font-medium leading-snug text-slate-800">{canonicalTitle}</p>
           {task.description?.trim() ? (
             <p className="mt-2 text-xs leading-relaxed text-slate-600">{task.description.trim()}</p>
           ) : null}
@@ -262,37 +271,31 @@ export function SprintTaskDetailModal({
             Columna actual: <span className="font-semibold text-slate-700">{boardCol}</span>
           </p>
 
-          <label className="mt-4 block rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3">
-            <span id={`${titleId}-status`} className="text-sm font-semibold text-slate-800">
+          <label className="mt-6 block rounded-2xl border border-slate-100 bg-slate-50/50 p-5 shadow-sm transition-all focus-within:border-indigo-200 focus-within:bg-white focus-within:shadow-md">
+            <span id={`${titleId}-status`} className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-3 block">
               Estado en el tablero
             </span>
-            <select
-              id={`${titleId}-status-select`}
-              aria-labelledby={`${titleId}-status`}
-              className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400/30 disabled:opacity-50"
-              value={columnDraft}
-              disabled={saving}
-              onChange={(e) => setColumnDraft(e.target.value as SprintTaskKanbanColumn)}
-            >
-              {SPRINT_TASK_KANBAN_COLUMN_ORDER.map((col) => (
-                <option key={col} value={col}>
-                  {sprintTaskKanbanColumnLabel(col)}
-                </option>
-              ))}
-            </select>
-            <span className="mt-2 block text-xs leading-relaxed text-slate-600">
-              {persistedOnNotion ? (
-                <>
-                  Al guardar, el título en Notion queda así: Pendiente sin prefijo,{" "}
-                  <span className="font-mono">[~]</span> para en curso, <span className="font-mono">[x]</span> para
-                  hecho (misma convención que el tablero del sprint).
-                </>
-              ) : (
-                <>
-                  Se actualiza el título sólo en el navegador en este equipo (proyectos sin sincronización Notion).
-                </>
-              )}
-            </span>
+            <div className="relative">
+              <select
+                id={`${titleId}-status-select`}
+                aria-labelledby={`${titleId}-status`}
+                className="block w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 shadow-sm transition-all hover:border-indigo-300 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                value={columnDraft}
+                disabled={saving}
+                onChange={(e) => setColumnDraft(e.target.value as SprintTaskKanbanColumn)}
+              >
+                {SPRINT_TASK_KANBAN_COLUMN_ORDER.map((col) => (
+                  <option key={col} value={col}>
+                    {sprintTaskKanbanColumnLabel(col)}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
           </label>
         </div>
 
@@ -464,9 +467,18 @@ export function SprintTaskDetailModal({
               type="button"
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
               disabled={
-                saving || uploading || postingComment || nextTitle.trim() === task.title.trim() || blockNotionWrite
+                saving ||
+                uploading ||
+                postingComment ||
+                !hasChanges ||
+                blockNotionWrite
               }
-              onClick={() => onSave(nextTitle)}
+              onClick={() =>
+                onSave({
+                  title: canonicalTitle.trim().slice(0, 2000),
+                  sprintBoardColumn: columnDraft,
+                })
+              }
             >
               {saving ? "Guardando…" : "Guardar"}
             </button>

@@ -15,6 +15,8 @@ import { phaseLabel, riskLabel, urgencyLabel, urgencyBadgeClass } from "@/lib/it
 import {
   computeProjectScopeProgress,
   projectScopeProgressFillClass,
+  inferScopeItemCompletedFromTitle,
+  resolvedSprintTaskKanbanColumn,
 } from "@/lib/itProjectScopeProgress";
 import type { ItProject } from "@/lib/itProjectTypes";
 
@@ -132,36 +134,45 @@ function ItProjectDeleteActions({ project }: { project: ItProject }) {
 
   return (
     <>
-      <div className="mt-12 rounded-xl border border-rose-100 bg-rose-50/40 px-5 py-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-rose-800/80">Zona de riesgo</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          {isNotion ? (
-            <>
-              Al confirmar se quita del portafolio y Notion mueve la página a la{" "}
-              <strong className="font-semibold text-slate-800">papelera</strong>. La API pública de Notion no ofrece borrado
-              definitivo automático: para eliminarla por completo hay que vaciar la papelera (o borrar la página) desde la
-              aplicación o web de Notion.
-            </>
-          ) : (
-            "Es un borrado permanente en este navegador: se eliminan los datos guardados aquí."
-          )}
-        </p>
-        {feedback && !modalOpen ? (
-          <p className="mt-2 text-sm text-rose-700" role="alert">
-            {feedback}
+      <div className="mt-12 overflow-hidden rounded-2xl border border-rose-200/60 bg-gradient-to-r from-rose-50/50 to-white shadow-sm transition-shadow hover:shadow-md">
+        <div className="px-6 py-5 border-b border-rose-100/50">
+          <h2 className="text-xs font-extrabold uppercase tracking-widest text-rose-800 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            Zona de riesgo
+          </h2>
+        </div>
+        <div className="px-6 py-5">
+          <p className="text-sm text-slate-600 leading-relaxed">
+            {isNotion ? (
+              <>
+                Al confirmar se quita del portafolio y Notion mueve la página a la{" "}
+                <strong className="font-semibold text-rose-900">papelera</strong>. La API pública de Notion no ofrece borrado
+                definitivo automático: para eliminarla por completo hay que vaciar la papelera (o borrar la página) desde la
+                aplicación o web de Notion.
+              </>
+            ) : (
+              "Es un borrado permanente en este navegador: se eliminan los datos guardados aquí."
+            )}
           </p>
-        ) : null}
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => {
-            setFeedback(null);
-            setModalOpen(true);
-          }}
-          className="mt-3 rounded-lg border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-800 shadow-sm transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {pending ? "Procesando…" : isNotion ? "Eliminar proyecto (papelera en Notion)" : "Eliminar del navegador"}
-        </button>
+          {feedback && !modalOpen ? (
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 flex items-start gap-2" role="alert">
+               <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+               {feedback}
+            </div>
+          ) : null}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              setFeedback(null);
+              setModalOpen(true);
+            }}
+            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-white px-5 py-2.5 text-sm font-bold text-rose-700 shadow-sm transition-all hover:bg-rose-50 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            {pending ? "Procesando…" : isNotion ? "Eliminar proyecto (papelera en Notion)" : "Eliminar del navegador"}
+          </button>
+        </div>
       </div>
 
       {modalOpen ? (
@@ -269,9 +280,9 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
       <div className="flex flex-wrap items-center justify-between gap-3 gap-y-2">
         <Link
           href="/proyectos"
-          className="inline-flex items-center gap-2 rounded-full px-1 py-1 text-sm font-medium text-indigo-800 transition hover:bg-indigo-50 hover:text-indigo-950"
+          className="inline-flex items-center gap-2 rounded-full px-2 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
         >
-          <span aria-hidden className="text-lg leading-none">
+          <span aria-hidden className="text-lg leading-none mt-[-2px]">
             ←
           </span>
           Volver a proyectos
@@ -279,7 +290,7 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
         {canEdit === true ? (
           <Link
             href={`/proyectos/${encodeURIComponent(p.id)}/edit`}
-            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 transition-all hover:bg-slate-50 hover:text-sky-700 hover:ring-sky-200 hover:shadow"
+            className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 transition-all hover:bg-slate-50 hover:text-sky-700 hover:ring-sky-200 hover:shadow"
           >
             Editar
           </Link>
@@ -287,36 +298,36 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
       </div>
 
       <header
-        className={`relative mt-6 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/30 to-slate-50/80 px-6 py-8 shadow-sm sm:px-8 sm:py-10 ${riskBarClass(
+        className={`relative mt-6 overflow-hidden rounded-3xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/40 to-slate-50/90 px-6 py-8 shadow-sm sm:px-8 sm:py-10 ${riskBarClass(
           p.riskLevel,
         )}`}
       >
-        <div className="flex flex-wrap items-start justify-between gap-6">
+        <div className="flex flex-wrap items-start justify-between gap-6 relative z-10">
           <div className="flex-1 min-w-[280px]">
-            <div className="flex items-center gap-3">
-              <p className="font-mono text-xs font-bold text-indigo-700">{p.code}</p>
-              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${phaseBadgeClass(p.phase)}`}>
+            <div className="flex items-center gap-3 animate-fade-in">
+              <p className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">{p.code}</p>
+              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset shadow-sm transition hover:scale-105 ${phaseBadgeClass(p.phase)}`}>
                 {phaseLabel(p.phase)}
               </span>
             </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{p.name}</h1>
+            <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl animate-fade-in" style={{animationDelay: '100ms'}}>{p.name}</h1>
           </div>
-          <div className="flex flex-col items-end gap-3 shrink-0">
+          <div className="flex flex-col items-end gap-3 shrink-0 animate-fade-in" style={{animationDelay: '200ms'}}>
             <div className="flex flex-wrap justify-end gap-2">
-              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset ${riskBadgeClass(p.riskLevel)}`}>
+              <span className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-bold ring-1 ring-inset shadow-sm transition hover:scale-105 ${riskBadgeClass(p.riskLevel)}`}>
                 Riesgo: {riskLabel(p.riskLevel)}
               </span>
-              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset ${urgencyBadgeClass(p.urgencyLevel)}`}>
+              <span className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-bold ring-1 ring-inset shadow-sm transition hover:scale-105 ${urgencyBadgeClass(p.urgencyLevel)}`}>
                 Urgencia: {urgencyLabel(p.urgencyLevel)}
               </span>
             </div>
-            <div className="mt-1 flex flex-wrap justify-end gap-2">
+            <div className="mt-2 flex flex-wrap justify-end gap-2">
               {isLikelyNotionPageId(p.id) ? (
                 <a
                   href={`https://notion.so/${p.id.replace(/-/g, "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 transition-all hover:bg-slate-50 hover:text-indigo-600 hover:ring-indigo-200 hover:shadow"
+                  className="inline-flex items-center gap-2 rounded-xl bg-white/80 backdrop-blur-sm px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200/50 transition-all hover:bg-white hover:text-indigo-600 hover:ring-indigo-300 hover:shadow-md hover:-translate-y-0.5"
                   title="Abrir proyecto en Notion"
                 >
                   <svg
@@ -338,203 +349,268 @@ function ItProjectDetailBody({ p, soloNavegador }: { p: ItProject; soloNavegador
             </div>
           </div>
         </div>
+        {/* Decorative background gradients */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none" aria-hidden="true" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-sky-500/5 blur-3xl pointer-events-none" aria-hidden="true" />
       </header>
 
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Descripción del proyecto</h2>
-        <div className="mt-4 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
+      <section className="mt-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+        <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+          <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
+          Descripción del proyecto
+        </h2>
+        <div className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
           {p.description.trim() === "" || p.description === "—" ? (
-            <p className="text-slate-500">Sin descripción.</p>
+            <p className="text-slate-400 italic">Sin descripción.</p>
           ) : (
             p.description
           )}
         </div>
       </section>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Generalidades</h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">Responsable</dt>
-              <dd className="font-medium text-slate-900">{p.pmName}</dd>
-            </div>
-            <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">Inicio</dt>
-              <dd className="font-medium text-slate-900 capitalize">
-                {new Date(p.startDate).toLocaleDateString("es-MX", { month: "long" }).replace(/^./, c => c.toUpperCase()) + " " + new Date(p.startDate).getFullYear()}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+          <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Generalidades
+          </h2>
+          <dl className="space-y-4 text-sm mt-5">
+            <div className="flex justify-between items-center gap-4 border-b border-slate-50 pb-3">
+              <dt className="text-slate-500 font-medium">Mes / Año</dt>
+              <dd className="font-semibold text-slate-900 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                {p.month || "—"} {p.year ? `/ ${p.year}` : ""}
               </dd>
             </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Fin objetivo</dt>
-              <dd className="font-medium text-slate-900 capitalize">
-                {new Date(p.targetEndDate).toLocaleDateString("es-MX", { month: "long" }).replace(/^./, c => c.toUpperCase()) + " " + new Date(p.startDate).getFullYear()}
+            <div className="flex justify-between items-center gap-4 border-b border-slate-50 pb-3">
+              <dt className="text-slate-500 font-medium">Responsable</dt>
+              <dd className="font-semibold text-slate-900 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">{p.pmName}</dd>
+            </div>
+            <div className="flex justify-between items-center gap-4 border-b border-slate-50 pb-3">
+              <dt className="text-slate-500 font-medium">Inicio</dt>
+              <dd className="font-semibold text-slate-900 capitalize">
+                {new Date(p.startDate).toLocaleDateString("es-MX", { month: "short", year: "numeric" }).replace(/^./, c => c.toUpperCase())}
+              </dd>
+            </div>
+            <div className="flex justify-between items-center gap-4">
+              <dt className="text-slate-500 font-medium">Fin objetivo</dt>
+              <dd className="font-semibold text-slate-900 capitalize">
+                {new Date(p.targetEndDate).toLocaleDateString("es-MX", { month: "short", year: "numeric" }).replace(/^./, c => c.toUpperCase())}
               </dd>
             </div>
           </dl>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Progreso actual del proyecto</h2>
-          {scopeProgress.total === 0 ? (
-            <>
-              <p className="mt-2 text-sm text-slate-600">
-                Aún no hay <strong>KR</strong>, <strong>tareas</strong> ni <strong>sprints</strong> vinculados para calcular avance en
-                esta vista.
+        <section className="flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+          <div>
+            <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              Progreso actual
+            </h2>
+            {scopeProgress.total === 0 ? (
+              <p className="mt-4 text-sm text-slate-500 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                Aún no hay KR, tareas ni sprints vinculados para calcular avance.
               </p>
-              <p className="mt-3 text-xs leading-relaxed text-slate-500">
-                Cuando existan ítems, el porcentaje promedia KR + tareas + sprints marcados como hechos si el texto empieza con{" "}
-                <span className="font-mono">[x]</span>, emoji de check o etiquetas tipo <strong>Hecho:</strong>.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-sm text-slate-600">
-                {scopeProgress.completed} de {scopeProgress.total} elementos (KR + tareas + sprints) considerados{" "}
-                <strong className="font-medium text-slate-800">completados</strong> ({scopeProgress.percent}%).
-              </p>
-              <p className="mt-2 text-xs text-slate-500">
-                Completados detectados desde el texto del ítem (p. ej. <span className="font-mono">[x]</span>,{" "}
-                <span className="font-mono">✅</span>) en Notion o en proyectos sólo navegador.
-              </p>
-            </>
-          )}
-          <div
-            className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-200"
-            role="progressbar"
-            aria-valuenow={scopeBarPct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Progreso de alcance del proyecto"
-          >
+            ) : (
+              <div className="flex items-end justify-between gap-4 mb-2 mt-4">
+                <div className="text-sm text-slate-600">
+                  <span className="font-bold text-slate-900 text-xl">{scopeProgress.completed}</span> de {scopeProgress.total} ítems completados
+                </div>
+                <div className="text-3xl font-black text-slate-800 tracking-tighter">{scopeProgress.percent}%</div>
+              </div>
+            )}
+          </div>
+          <div className="mt-8">
             <div
-              className={`h-full rounded-full transition-[width] duration-500 ease-out ${scopeBarFill}`}
-              style={{ width: `${scopeBarPct}%` }}
-            />
+              className="h-3 overflow-hidden rounded-full bg-slate-100 border border-slate-200/50 shadow-inner"
+              role="progressbar"
+              aria-valuenow={scopeBarPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Progreso de alcance del proyecto"
+            >
+              <div
+                className={`h-full rounded-full transition-all duration-1000 ease-out ${scopeBarFill} shadow-sm`}
+                style={{ width: `${scopeBarPct}%` }}
+              />
+            </div>
+            {scopeProgress.total > 0 && (
+               <p className="mt-3 text-[11px] text-slate-400 font-medium">
+                 Basado en el texto de ítems (KR, tareas, sprints) desde Notion.
+               </p>
+            )}
           </div>
         </section>
       </div>
 
-      <section className="mt-8">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Planeación de alcance</h2>
-        <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="flex min-h-0 flex-col rounded-xl border border-amber-200/80 bg-gradient-to-b from-amber-50/50 to-white p-5 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900">Resultados clave (KR)</h3>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500">
-              Objetivos medibles del proyecto, enlazados desde Notion (propiedad <span className="font-mono">KR</span>).
-            </p>
-            {p.keyResults.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">
-                Sin KRs vinculados. En Notion, enlaza filas de <strong>ITAI: kr de proyectos</strong> en la columna KR del
-                proyecto.
-              </p>
-            ) : (
-              <div
-                className="mt-4 max-h-[min(22rem,50vh)] overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]"
-                role="region"
-                aria-label="Lista de resultados clave"
-              >
-                <ol className="list-decimal space-y-2 pl-4 text-sm text-slate-800">
-                  {p.keyResults.map((kr) => (
-                    <li key={kr.id} className="leading-snug marker:font-semibold marker:text-amber-700">
-                      {kr.title}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-          </div>
-
-          <div className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900">Tareas</h3>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500">
-              Trabajo planificado ligado al proyecto. Si viene de Notion con relación sprint, se muestra el nombre aquí.
-            </p>
-            {p.plannedTasks.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">
-                No hay tareas vinculadas. En Notion enlaza las filas de tu base de tareas desde la página del proyecto.
-              </p>
-            ) : (
-              <div
-                className="mt-4 max-h-[min(22rem,50vh)] overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]"
-                role="region"
-                aria-label="Lista de tareas"
-              >
-                <ul className="space-y-2">
-                  {p.plannedTasks.map((t) => {
-                    const sid = typeof t.sprintId === "string" ? t.sprintId.trim() : "";
-                    const sprintResolved = sid ? p.sprints.find((s) => s.id === sid) : undefined;
-                    const sprintHeadline = (t.sprintTitle ?? sprintResolved?.title ?? "").trim();
-                    const sprintBoardHref =
-                      sprintResolved !== undefined
-                        ? `/proyectos/${encodeURIComponent(p.id)}/sprints/${encodeURIComponent(sprintResolved.id)}`
-                        : null;
-
+      <section className="mt-10">
+        <h2 className="text-sm font-black uppercase tracking-wider text-slate-800 mb-6 flex items-center gap-2">
+          <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          Planeación de alcance
+        </h2>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
+          <div className="flex flex-col rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white shadow-sm transition-all hover:shadow-md hover:border-amber-300/80">
+            <div className="p-5 border-b border-amber-100/50">
+              <h3 className="text-sm font-bold text-amber-900 flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-200/50 text-amber-700">🎯</span>
+                Resultados clave (KR)
+              </h3>
+              <p className="mt-2 text-[11px] leading-relaxed text-amber-700/80">Objetivos medibles (propiedad <span className="font-mono">KR</span>).</p>
+            </div>
+            <div className="p-5 flex-1 bg-white/50 rounded-b-2xl">
+              {p.keyResults.length === 0 ? (
+                <p className="text-sm text-slate-400 italic">Sin KRs vinculados.</p>
+              ) : (
+                <ol className="list-decimal space-y-3 pl-4 text-sm text-slate-700">
+                  {p.keyResults.map((kr) => {
+                    const isDone = inferScopeItemCompletedFromTitle(kr.title);
                     return (
-                      <li key={t.id} className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5">
-                        <span className="text-sm font-medium text-slate-900">{t.title}</span>
-                        {t.description?.trim() ? (
-                          <p className="mt-1.5 whitespace-pre-wrap text-xs leading-relaxed text-slate-600">
-                            {t.description.trim()}
-                          </p>
-                        ) : null}
-                        {sprintHeadline ? (
-                          <p className="mt-1 text-xs text-violet-900/95">
-                            <span className="font-semibold text-slate-600">Sprint: </span>
-                            {sprintBoardHref ? (
-                              <Link
-                                href={sprintBoardHref}
-                                className="font-medium text-violet-800 underline-offset-2 hover:underline"
-                              >
-                                {sprintHeadline}
-                              </Link>
-                            ) : (
-                              sprintHeadline
-                            )}
-                          </p>
-                        ) : null}
+                      <li key={kr.id} className={`leading-snug marker:font-bold ${isDone ? 'marker:text-emerald-500' : 'marker:text-amber-500'} pl-1`}>
+                        {isDone ? <span className="mr-1 inline-block" aria-hidden="true">✅</span> : null}
+                        <span className={isDone ? "line-through text-slate-400" : ""}>{kr.title}</span>
                       </li>
                     );
                   })}
-                </ul>
-              </div>
-            )}
+                </ol>
+              )}
+            </div>
           </div>
 
-          <div className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900">Sprints</h3>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500">
-              Ventanas de iteración planeadas sobre el proyecto.
-            </p>
-            {p.sprints.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No hay sprints definidos.</p>
-            ) : (
-              <div
-                className="mt-4 max-h-[min(22rem,50vh)] overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]"
-                role="region"
-                aria-label="Lista de sprints"
-              >
+          <div className="flex flex-col rounded-2xl border border-violet-200/60 bg-gradient-to-br from-violet-50/80 to-white shadow-sm transition-all hover:shadow-md hover:border-violet-300/80">
+             <div className="p-5 border-b border-violet-100/50">
+              <h3 className="text-sm font-bold text-violet-900 flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-violet-200/50 text-violet-700">🔄</span>
+                Sprints
+              </h3>
+              <p className="mt-2 text-[11px] leading-relaxed text-violet-700/80">Iteraciones sobre el proyecto.</p>
+            </div>
+            <div className="p-5 flex-1 bg-white/50 rounded-b-2xl">
+              {p.sprints.length === 0 ? (
+                <p className="text-sm text-slate-400 italic">No hay sprints definidos.</p>
+              ) : (
                 <ul className="space-y-3">
-                  {p.sprints.map((s) => (
+                  {p.sprints.map((s) => {
+                    let isDone = inferScopeItemCompletedFromTitle(s.title);
+                    if (!isDone) {
+                      const sprintTasks = p.plannedTasks.filter(t => t.sprintId === s.id);
+                      isDone = sprintTasks.length > 0 && sprintTasks.every(t => 
+                        resolvedSprintTaskKanbanColumn(t) === "hecho" || inferScopeItemCompletedFromTitle(t.title)
+                      );
+                    }
+                    return (
                     <li key={s.id}>
                       <Link
                         href={`/proyectos/${encodeURIComponent(p.id)}/sprints/${encodeURIComponent(s.id)}`}
-                        className="block rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2.5 transition hover:border-violet-200 hover:bg-violet-50/70"
+                        className={`group flex flex-col rounded-xl border ${isDone ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100 bg-white'} px-4 py-3 shadow-sm transition-all hover:border-violet-300 hover:shadow-md hover:-translate-y-0.5`}
                       >
-                        <span className="text-sm font-medium text-slate-900">{s.title}</span>
-                        <span className="ml-2 text-[11px] font-semibold uppercase tracking-wide text-violet-700">
-                          Ver tablero
-                        </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-sm font-bold flex items-center gap-2 transition-colors ${isDone ? 'text-emerald-800 group-hover:text-emerald-900' : 'text-slate-800 group-hover:text-violet-700'}`}>
+                            {isDone ? <span aria-hidden="true">✅</span> : null}
+                            <span className={isDone ? "line-through opacity-75" : ""}>{s.title}</span>
+                          </span>
+                          <span className="inline-flex rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-600 ring-1 ring-inset ring-violet-200/50 group-hover:bg-violet-100">
+                            Tablero
+                          </span>
+                        </div>
                         {s.timeframe ? (
-                          <p className="mt-0.5 font-mono text-xs text-violet-800/90">{s.timeframe}</p>
+                          <p className="mt-2 font-mono text-[11px] font-medium text-slate-500">{s.timeframe}</p>
                         ) : null}
                       </Link>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* Tareas (Ocultas temporalmente a petición del usuario) */}
+          {false && (
+            <div className="lg:col-span-2 flex flex-col rounded-2xl border border-blue-200/60 bg-gradient-to-br from-blue-50/80 to-white shadow-sm transition-all hover:shadow-md hover:border-blue-300/80">
+              <div className="p-5 border-b border-blue-100/50">
+                <h3 className="text-sm font-bold text-blue-900 flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-200/50 text-blue-700">📝</span>
+                  Tareas
+                </h3>
+                <p className="mt-2 text-[11px] leading-relaxed text-blue-700/80">Trabajo planificado y asociado.</p>
+              </div>
+              <div className="p-5 flex-1 bg-white/50 rounded-b-2xl">
+                {p.plannedTasks.length === 0 ? (
+                  <p className="text-sm text-slate-400 italic">No hay tareas vinculadas.</p>
+                ) : (
+                  <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+                    {p.plannedTasks.map((t) => {
+                      const sid = typeof t.sprintId === "string" ? t.sprintId.trim() : "";
+                      const sprintResolved = sid ? p.sprints.find((s) => s.id === sid) : undefined;
+                      const sprintHeadline = (t.sprintTitle ?? sprintResolved?.title ?? "").trim();
+                      const sprintBoardHref = sprintResolved !== undefined ? `/proyectos/${encodeURIComponent(p.id)}/sprints/${encodeURIComponent(sprintResolved.id)}` : null;
+                      const isDone = resolvedSprintTaskKanbanColumn(t) === "hecho" || inferScopeItemCompletedFromTitle(t.title);
+                      const notionTaskUrl = isLikelyNotionPageId(t.id) ? `https://www.notion.so/${t.id.replace(/-/g, "")}` : null;
+                      const targetHref = sprintBoardHref || notionTaskUrl;
+                      const isInternalLink = !!sprintBoardHref;
+
+                      const cardContent = (
+                        <>
+                          <div className="flex items-start justify-between gap-2">
+                            <span className={`text-sm font-semibold flex items-start gap-2 ${isDone ? 'text-emerald-800' : 'text-slate-800 group-hover:text-blue-700 transition-colors'}`}>
+                              {isDone ? <span aria-hidden="true" className="shrink-0 mt-0.5">✅</span> : null}
+                              <span className={isDone ? "line-through opacity-75" : ""}>{t.title}</span>
+                            </span>
+                            {targetHref && !isInternalLink && (
+                              <span className="shrink-0 inline-flex items-center justify-center rounded-full bg-slate-100 p-1.5 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors" title="Abrir en Notion">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                              </span>
+                            )}
+                          </div>
+                          {t.description?.trim() ? (
+                            <p className="mt-2 whitespace-pre-wrap text-[11px] leading-relaxed text-slate-500 line-clamp-3">
+                              {t.description.trim()}
+                            </p>
+                          ) : null}
+                          <div className="mt-auto pt-3">
+                            {sprintHeadline ? (
+                              <div className="pt-2 border-t border-slate-100/50 flex items-center justify-between gap-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sprint</span>
+                                  <span className="text-[11px] font-medium text-slate-600 group-hover:text-violet-700 transition-colors">{sprintHeadline}</span>
+                                </div>
+                                {isInternalLink && (
+                                  <span className="inline-flex rounded-full bg-violet-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-600 ring-1 ring-inset ring-violet-200/50 group-hover:bg-violet-100 transition-colors">
+                                    Tablero
+                                  </span>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        </>
+                      );
+
+                      return (
+                        <li key={t.id} className="flex">
+                          {targetHref ? (
+                            isInternalLink ? (
+                              <Link href={targetHref} className={`group flex flex-col flex-1 rounded-xl border ${isDone ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100 bg-white'} px-4 py-3 shadow-sm transition hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5`}>
+                                {cardContent}
+                              </Link>
+                            ) : (
+                              <a href={targetHref} target="_blank" rel="noopener noreferrer" className={`group flex flex-col flex-1 rounded-xl border ${isDone ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100 bg-white'} px-4 py-3 shadow-sm transition hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5`}>
+                                {cardContent}
+                              </a>
+                            )
+                          ) : (
+                            <div className={`flex flex-col flex-1 rounded-xl border ${isDone ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100 bg-white'} px-4 py-3 shadow-sm transition hover:border-blue-200`}>
+                              {cardContent}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+
+
         </div>
       </section>
 

@@ -46,6 +46,8 @@ export function buildNotionCreateProjectProperties(input: {
   pmName?: string;
   /** Si `NOTION_PROP_PROJECT_DESCRIPTION` está definido, se mapea como `rich_text`. */
   description?: string;
+  startDate?: string;
+  targetEndDate?: string;
 }): Record<string, unknown> {
   const titlePropName = process.env.NOTION_PROP_PROJECT_TITLE?.trim() || "Nombre";
   const riskProp = process.env.NOTION_PROP_PROJECT_RISK?.trim() || "Nivel de riesgo";
@@ -87,6 +89,9 @@ export function buildNotionCreateProjectProperties(input: {
   if (descriptionProp && desc) {
     props[descriptionProp] = { rich_text: notionRichTextFromPlain(desc) };
   }
+
+  // Nota: INICIO, FIN OBJETIVO, meses y años son relaciones o no existen en el esquema detectado.
+  // Evitamos enviarlos para que no falle la creación.
 
   return props;
 }

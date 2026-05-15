@@ -1,4 +1,4 @@
-import type { ItProject, ItProjectPlannedTask } from "@/lib/itProjectTypes";
+import type { ItProject, ItProjectPlannedTask, ItSprintTaskBoardColumn } from "@/lib/itProjectTypes";
 
 /**
  * Heurística sobre el título del ítem: la vista Notion sólo enlaza página + título;
@@ -45,8 +45,8 @@ export function stripLeadingSprintTaskStatusPrefix(raw: string): string {
   return t;
 }
 
-/** Columnas del tablero por sprint (misma filosofía que el avance de alcance: convenciones en el título). */
-export type SprintTaskKanbanColumn = "pendiente" | "en_curso" | "hecho";
+/** Columnas del tablero sprint: lectura/escritura en Notión usa la propiedad de tarea configurada (por defecto `Estatus`; desactivar con `NOTION_DISABLE_TASK_BOARD_STATUS_SYNC=1`). */
+export type SprintTaskKanbanColumn = ItSprintTaskBoardColumn;
 
 export const SPRINT_TASK_KANBAN_COLUMN_ORDER: readonly SprintTaskKanbanColumn[] = [
   "pendiente",
@@ -54,34 +54,38 @@ export const SPRINT_TASK_KANBAN_COLUMN_ORDER: readonly SprintTaskKanbanColumn[] 
   "hecho",
 ];
 
-/**
- * Fija el prefijo del título según la columna del tablero (alineado con `inferSprintTaskKanbanColumn`).
- */
-export function applySprintTaskTitleForKanbanColumn(
-  title: string,
-  column: SprintTaskKanbanColumn,
-): string {
-  const core = stripLeadingSprintTaskStatusPrefix(title).trim();
-  const max = 2000;
-  if (column === "pendiente") {
-    return core.slice(0, max);
-  }
-  if (column === "en_curso") {
-    return `[~] ${core}`.trim().slice(0, max);
-  }
-  return `[x] ${core}`.trim().slice(0, max);
+/** Texto guardado sin prefijos de tablero; la columna se define aparte (`sprintBoardColumn` / Notión). */
+export function plannedTaskCanonicalTitle(raw: string): string {
+  return stripLeadingSprintTaskStatusPrefix(raw).trim().slice(0, 2000);
 }
 
-/** Ajusta el título para reflejar hecho / no hecho (compat. con inferScopeItemCompletedFromTitle). */
-export function applySprintTaskTitleDoneState(title: string, done: boolean): string {
-  return applySprintTaskTitleForKanbanColumn(title, done ? "hecho" : "pendiente");
+/**
+ * Prefijos en desuso: el tablero no muta `[x]` / `[~]`. Equivalente a `plannedTaskCanonicalTitle`.
+ * @deprecated
+ */
+export function applySprintTaskTitleForKanbanColumn(title: string, _column: SprintTaskKanbanColumn): string {
+  return plannedTaskCanonicalTitle(title);
+}
+
+/** Preferir `plannedTaskCanonicalTitle` + campo de columna cuando exista migración desde heurísticas en título. */
+export function applySprintTaskTitleDoneState(title: string, _done: boolean): string {
+  return plannedTaskCanonicalTitle(title);
+}
+
+/** Columna mostrada por tarea (campo persistido tiene prioridad; si no, heurísticas en el texto). */
+export function resolvedSprintTaskKanbanColumn(
+  task: Pick<ItProjectPlannedTask, "title" | "sprintBoardColumn">,
+): SprintTaskKanbanColumn {
+  const tagged = task.sprintBoardColumn;
+  if (tagged === "pendiente" || tagged === "en_curso" || tagged === "hecho") return tagged;
+  return inferSprintTaskKanbanColumn(task.title);
 }
 
 export function sprintTaskKanbanColumnLabel(col: SprintTaskKanbanColumn): string {
   const map: Record<SprintTaskKanbanColumn, string> = {
-    pendiente: "Pendiente",
+    pendiente: "Por empezar",
     en_curso: "En curso",
-    hecho: "Hecho",
+    hecho: "Completado",
   };
   return map[col];
 }
@@ -97,7 +101,8 @@ export function sprintTaskKanbanColumnTopBorderClass(col: SprintTaskKanbanColumn
 }
 
 /**
- * Clasifica una tarea en columna Kanban usando el título (Notion sólo nos da título en esta app).
+ * Clasifica una tarea en columna Kanban usando heurísticas del título si no viene `sprintBoardColumn`;
+ * tras guardar con la nueva lógica, los títulos en Notión suelen estar sin `[x]` / `[~]` y cuenta el campo persistido.
  */
 export function inferSprintTaskKanbanColumn(title: string): SprintTaskKanbanColumn {
   if (inferScopeItemCompletedFromTitle(title)) return "hecho";
@@ -127,14 +132,27 @@ export type ScopeProgress = {
 export function computeProjectScopeProgress(
   p: Pick<ItProject, "keyResults" | "plannedTasks" | "sprints">,
 ): ScopeProgress {
-  const titles = [
-    ...p.keyResults.map((x) => x.title),
-    ...p.plannedTasks.map((x) => x.title),
-    ...p.sprints.map((x) => x.title),
-  ];
-  const total = titles.length;
+  const krCompleted = p.keyResults.filter((x) => inferScopeItemCompletedFromTitle(x.title)).length;
+  
+  // Las tareas pueden estar completadas si su columna Kanban es "hecho" o si su título lo indica
+  const tasksCompletedList = p.plannedTasks.filter(
+    (x) => resolvedSprintTaskKanbanColumn(x) === "hecho" || inferScopeItemCompletedFromTitle(x.title)
+  );
+  const tasksCompleted = tasksCompletedList.length;
+
+  const sprintsCompleted = p.sprints.filter((x) => {
+    if (inferScopeItemCompletedFromTitle(x.title)) return true;
+    // Si no tiene prefijo, verificamos si TODAS sus tareas están completadas
+    const sprintTasks = p.plannedTasks.filter(t => t.sprintId === x.id);
+    return sprintTasks.length > 0 && sprintTasks.every(t => 
+      resolvedSprintTaskKanbanColumn(t) === "hecho" || inferScopeItemCompletedFromTitle(t.title)
+    );
+  }).length;
+
+  const total = p.keyResults.length + p.plannedTasks.length + p.sprints.length;
+  const completed = krCompleted + sprintsCompleted + tasksCompleted;
+
   if (total === 0) return { completed: 0, total: 0, percent: 0 };
-  const completed = titles.filter(inferScopeItemCompletedFromTitle).length;
   const percent = Math.round((completed / total) * 100);
   return { completed, total, percent };
 }

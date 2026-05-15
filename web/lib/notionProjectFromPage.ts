@@ -1,11 +1,15 @@
 import type { ItProject } from "@/lib/itProjectTypes";
 import { mapNotionEstatusToPhase } from "@/lib/notionEstatusPhase";
 import {
+  inferSprintTaskKanbanColumn,
+  plannedTaskCanonicalTitle,
+} from "@/lib/itProjectScopeProgress";
+import {
   notionApiJsonHeaders,
   notionRelationPropertyCandidates,
   relationIdsFromCandidates,
   resolveNotionRelatedPageTitles,
-  resolveTaskLinkedFirstSprintIds,
+  resolveTaskPagePeek,
 } from "@/lib/notionRelations";
 import { resolveItProjectPmName } from "@/lib/notionProjectResponsable";
 
@@ -124,6 +128,9 @@ function notionRowToExtract(
     const rt = obj.rich_text as Array<{ plain_text: string }> | undefined;
     if (rt?.[0]?.plain_text) return rt[0].plain_text;
 
+    const dt = obj.date as { start: string } | undefined;
+    if (dt?.start) return dt.start;
+
     if (obj.rollup) {
       const roll = obj.rollup as {
         type: string;
@@ -162,6 +169,8 @@ function notionRowToExtract(
   const urgencyLevel: ItProject["urgencyLevel"] =
     urgencyName === "Alta" ? "alta" : urgencyName === "Baja" ? "baja" : "media";
 
+  const monthRelIds = relationIdsFromCandidates(props, ["meses", "Mes", "mes"]);
+  const yearRelIds = relationIdsFromCandidates(props, ["años", "Año", "año"]);
   const keyResultIds = relationIdsFromCandidates(props, krPropNames);
   const taskIds = relationIdsFromCandidates(props, taskPropNames);
   const sprintIds = relationIdsFromCandidates(props, sprintPropNames);
@@ -176,10 +185,14 @@ function notionRowToExtract(
       phase,
       sponsor: "Notion Sync",
       pmName,
-      startDate: created_time || new Date().toISOString(),
-      targetEndDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
+      startDate: getVal(props?.INICIO) || getVal(props?.Inicio) || getVal(props?.inicio) || created_time || new Date().toISOString(),
+      targetEndDate: getVal(props?.["FIN OBJETIVO"]) || getVal(props?.["Fin objetivo"]) || getVal(props?.["fin objetivo"]) || new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
       riskLevel,
       urgencyLevel,
+      month: getVal(props?.meses) || getVal(props?.Mes) || getVal(props?.mes),
+      monthId: monthRelIds[0],
+      year: getVal(props?.años) || getVal(props?.Año) || getVal(props?.año),
+      yearId: yearRelIds[0],
       milestones: [],
     },
     keyResultIds,
@@ -200,7 +213,7 @@ export async function notionRowsToItProjects(rows: unknown[], token: string): Pr
     notionRowToExtract(r, krPropNames, taskPropNames, sprintPropNames, deliverablePropNames),
   );
 
-  const sprintByTaskId = await resolveTaskLinkedFirstSprintIds(
+  const peekByTaskId = await resolveTaskPagePeek(
     extracted.flatMap((ex) => ex.taskIds),
     token,
   );
@@ -213,11 +226,16 @@ export async function notionRowsToItProjects(rows: unknown[], token: string): Pr
     for (const did of ex.deliverableIds) relatedIdSet.add(did);
   }
 
-  for (const sid of sprintByTaskId.values()) {
-    if (sid) relatedIdSet.add(sid);
+  for (const sid of peekByTaskId.values()) {
+    const s = sid.sprintId?.trim();
+    if (s) relatedIdSet.add(s);
   }
 
   const titleById = await resolveNotionRelatedPageTitles([...relatedIdSet], token);
+  for (const [id, peg] of peekByTaskId) {
+    const t = peg.plainTitle.trim();
+    if (t) titleById.set(id, peg.plainTitle);
+  }
 
   return extracted.map((ex) => ({
     ...ex.base,
@@ -226,13 +244,22 @@ export async function notionRowsToItProjects(rows: unknown[], token: string): Pr
       title: titleById.get(pageId) ?? "Sin título",
     })),
     plannedTasks: ex.taskIds.map((pageId) => {
-      const sprintIdLinked = sprintByTaskId.get(pageId);
+      const rawFull = titleById.get(pageId) ?? "";
+      const peek = peekByTaskId.get(pageId);
+      const sprintIdLinked = peek?.sprintId?.trim() ? peek.sprintId : undefined;
       const sprintTitleResolved =
         sprintIdLinked !== undefined ? (titleById.get(sprintIdLinked) ?? undefined) : undefined;
-      const baseRow = {
+      const inferred = inferSprintTaskKanbanColumn(rawFull.trim() || "Sin título");
+      const sprintBoardColumn = peek?.notionBoardColumn ?? inferred;
+
+      const baseRow: ItProject["plannedTasks"][number] = {
         id: pageId,
-        title: titleById.get(pageId) ?? "Sin título",
+        title: plannedTaskCanonicalTitle(rawFull.trim() ? rawFull : "Sin título"),
+        sprintBoardColumn,
+        ...(peek?.assigneeName !== undefined ? { assigneeName: peek.assigneeName } : {}),
+        ...(peek?.targetDate !== undefined ? { targetDate: peek.targetDate } : {}),
       };
+
       if (!sprintIdLinked) return baseRow;
       return {
         ...baseRow,
