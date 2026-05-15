@@ -72,9 +72,7 @@ export interface ItProject {
   targetEndDate: string;
   riskLevel: ItProjectRisk;
   urgencyLevel?: ItProjectUrgency;
-  month?: string;
   monthId?: string;
-  year?: string;
   yearId?: string;
 
   milestones: ItProjectMilestone[];

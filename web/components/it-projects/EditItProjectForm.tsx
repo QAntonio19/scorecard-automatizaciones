@@ -216,8 +216,6 @@ export function EditItProjectForm({ initialProject }: Props) {
         targetEndDate: targetEndDate || "—",
         riskLevel: riskSel,
         urgencyLevel: urgencySel,
-        month: month.trim(),
-        year: year.trim(),
         keyResults: keyResultLines.map((row) => ({ id: row.id, title: row.text })),
         plannedTasks: taskLines.map((row) => {
           const title = row.text.trim();

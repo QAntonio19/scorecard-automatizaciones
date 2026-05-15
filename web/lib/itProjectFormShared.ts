@@ -29,28 +29,6 @@ export const RISK_OPTIONS_WITH_PLACEHOLDER: FormStyledSelectOption<string>[] = [
   ...IT_PROJECT_RISK_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
 ];
 
-export const IT_PROJECT_MONTH_OPTIONS: FormStyledSelectOption<string>[] = [
-  { value: "", label: "Seleccionar mes…" },
-  { value: "Enero", label: "Enero" },
-  { value: "Febrero", label: "Febrero" },
-  { value: "Marzo", label: "Marzo" },
-  { value: "Abril", label: "Abril" },
-  { value: "Mayo", label: "Mayo" },
-  { value: "Junio", label: "Junio" },
-  { value: "Julio", label: "Julio" },
-  { value: "Agosto", label: "Agosto" },
-  { value: "Septiembre", label: "Septiembre" },
-  { value: "Octubre", label: "Octubre" },
-  { value: "Noviembre", label: "Noviembre" },
-  { value: "Diciembre", label: "Diciembre" },
-];
-
-export const IT_PROJECT_YEAR_OPTIONS: FormStyledSelectOption<string>[] = [
-  { value: "", label: "Seleccionar año…" },
-  { value: "2024", label: "2024" },
-  { value: "2025", label: "2025" },
-  { value: "2026", label: "2026" },
-];
 
 export const URGENCY_OPTIONS_WITH_PLACEHOLDER: FormStyledSelectOption<string>[] = [
   { value: "", label: "Seleccionar…" },
