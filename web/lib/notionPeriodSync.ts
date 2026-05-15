@@ -17,7 +17,7 @@ export async function findOrCreateNotionPageByTitle(params: {
   console.log(`[Notion Period] Buscando "${titleValue}" en DB ${databaseId}${relationFilter ? ` vinculada a ${relationFilter.id}` : ""}...`);
 
   // 1. Construir Filtro
-  const filter: any = {
+  const filter: Record<string, unknown> = {
     property: titlePropName,
     title: { equals: titleValue },
   };

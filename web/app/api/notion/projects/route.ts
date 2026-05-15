@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     });
 
     // 1. Resolver Periodo Automático (Meses/Años)
-    const periodProps: Record<string, any> = {};
+    const periodProps: Record<string, unknown> = {};
     if (dto.startDate) {
       try {
         const { monthId, yearId } = await resolveProjectPeriodRelations({

@@ -174,7 +174,7 @@ export async function PATCH(request: Request, ctx: RouteCtx) {
     });
 
     // 1. Resolver Relaciones de Periodo (Meses/Años) automáticas
-    const periodProps: Record<string, any> = {};
+    const periodProps: Record<string, unknown> = {};
     let monthIdForTasks: string | undefined = undefined;
     if (dto.startDate) {
       try {

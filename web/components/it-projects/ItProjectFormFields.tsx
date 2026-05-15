@@ -8,8 +8,6 @@ import { FormStyledMultiSelect } from "@/components/ui/FormStyledMultiSelect";
 import { FormStyledSelect, type FormStyledSelectOption } from "@/components/ui/FormStyledSelect";
 import {
   IT_PROJECT_PHASE_SELECT_OPTIONS,
-  IT_PROJECT_MONTH_OPTIONS,
-  IT_PROJECT_YEAR_OPTIONS,
   RISK_OPTIONS_WITH_PLACEHOLDER,
   URGENCY_OPTIONS_WITH_PLACEHOLDER,
   buildSprintPeriodFromIsoInputs,
@@ -904,7 +902,7 @@ export function ItProjectFormFields(props: ItProjectFormFieldsProps) {
                 ?
               </p>
               <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 italic border border-slate-100 line-clamp-3">
-                "{deleteTarget.title}"
+                &quot;{deleteTarget.title}&quot;
               </p>
             </div>
 
